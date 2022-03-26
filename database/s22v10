@@ -1,0 +1,462 @@
+"Simulation database AmPAL22V10"
+BEGIN_DEF
+5828 24 24 44
+DEFINE
+begin
+_zener = 2,3,4,5,6,7,8,9;
+_input = 0,1,_zener,X,N,Z,F;
+_clock = C,K,P,B,F,_input;
+_clk_input = _input,_clock;
+_output = H,L,X,N,Z,F;
+_io    = _input,_output;
+_power = N;
+end; "DEFINE"
+
+EQ "a PLA may have more than one equation type"
+begin "eq (pt array width,array direction) = ...."
+eq1(44,1) = 1 */1 *&fd23*/&fd23*2 */2 *&fd22*/&fd22*
+            3 */3 *&fd21*/&fd21*4 */4 *&fd20*/&fd20*
+            5 */5 *&fd19*/&fd19*6 */6 *&fd18*/&fd18*
+            7 */7 *&fd17*/&fd17*8 */8 *&fd16*/&fd16*
+            9 */9 *&fd15*/&fd15*10*/10*&fd14*/&fd14*
+            11*/11*13*/13;
+end;  "EQ"
+NODE
+begin
+fd23 = !5809 : 0 ( /23.Q ) : 1 ( 23 );
+fd22 = !5811 : 0 ( /22.Q ) : 1 ( 22 );
+fd21 = !5813 : 0 ( /21.Q ) : 1 ( 21 );
+fd20 = !5815 : 0 ( /20.Q ) : 1 ( 20 );
+fd19 = !5817 : 0 ( /19.Q ) : 1 ( 19 );
+fd18 = !5819 : 0 ( /18.Q ) : 1 ( 18 );
+fd17 = !5821 : 0 ( /17.Q ) : 1 ( 17 );
+fd16 = !5823 : 0 ( /16.Q ) : 1 ( 16 );
+fd15 = !5825 : 0 ( /15.Q ) : 1 ( 15 );
+fd14 = !5827 : 0 ( /14.Q ) : 1 ( 14 );
+
+"EQTYPE specifies the equation format to use; the number
+ specifies the starting fuse address to form the equation"
+p23_oe = eqtype(eq1) : 44;  "output enable for 23"
+p23_0  = eqtype(eq1) : 88;
+p23_1  = eqtype(eq1) : 132;
+p23_2  = eqtype(eq1) : 176;
+p23_3  = eqtype(eq1) : 220;
+p23_4  = eqtype(eq1) : 264;
+p23_5  = eqtype(eq1) : 308;
+p23_6  = eqtype(eq1) : 352;
+p23_7  = eqtype(eq1) : 396;
+
+p22_oe = eqtype(eq1) : 440; "output enable for 22"
+p22_0  = eqtype(eq1) : 484;
+p22_1  = eqtype(eq1) : 528;
+p22_2  = eqtype(eq1) : 572;
+p22_3  = eqtype(eq1) : 616;
+p22_4  = eqtype(eq1) : 660;
+p22_5  = eqtype(eq1) : 704;
+p22_6  = eqtype(eq1) : 748;
+p22_7  = eqtype(eq1) : 792;
+p22_8  = eqtype(eq1) : 836;
+p22_9  = eqtype(eq1) : 880;
+
+p21_oe = eqtype(eq1) : 924; "output enable for 21"
+p21_0  = eqtype(eq1) : 968;
+p21_1  = eqtype(eq1) : 1012;
+p21_2  = eqtype(eq1) : 1056;
+p21_3  = eqtype(eq1) : 1100;
+p21_4  = eqtype(eq1) : 1144;
+p21_5  = eqtype(eq1) : 1188;
+p21_6  = eqtype(eq1) : 1232;
+p21_7  = eqtype(eq1) : 1276;
+p21_8  = eqtype(eq1) : 1320;
+p21_9  = eqtype(eq1) : 1364;
+p21_10 = eqtype(eq1) : 1408;
+p21_11 = eqtype(eq1) : 1452;
+
+p20_oe = eqtype(eq1) : 1496; "output enable for 20"
+p20_0  = eqtype(eq1) : 1540;
+p20_1  = eqtype(eq1) : 1584;
+p20_2  = eqtype(eq1) : 1628;
+p20_3  = eqtype(eq1) : 1672;
+p20_4  = eqtype(eq1) : 1716;
+p20_5  = eqtype(eq1) : 1760;
+p20_6  = eqtype(eq1) : 1804;
+p20_7  = eqtype(eq1) : 1848;
+p20_8  = eqtype(eq1) : 1892;
+p20_9  = eqtype(eq1) : 1936;
+p20_10 = eqtype(eq1) : 1980;
+p20_11 = eqtype(eq1) : 2024;
+p20_12 = eqtype(eq1) : 2068;
+p20_13 = eqtype(eq1) : 2112;
+
+p19_oe = eqtype(eq1) : 2156;   "output enable for 19"
+p19_0  = eqtype(eq1) : 2200;
+p19_1  = eqtype(eq1) : 2244;
+p19_2  = eqtype(eq1) : 2288;
+p19_3  = eqtype(eq1) : 2332;
+p19_4  = eqtype(eq1) : 2376;
+p19_5  = eqtype(eq1) : 2420;
+p19_6  = eqtype(eq1) : 2464;
+p19_7  = eqtype(eq1) : 2508;
+p19_8  = eqtype(eq1) : 2552;
+p19_9  = eqtype(eq1) : 2596;
+p19_10 = eqtype(eq1) : 2640;
+p19_11 = eqtype(eq1) : 2684;
+p19_12 = eqtype(eq1) : 2728;
+p19_13 = eqtype(eq1) : 2772;
+p19_14 = eqtype(eq1) : 2816;
+p19_15 = eqtype(eq1) : 2860;
+
+p18_oe = eqtype(eq1) : 2904;   "output enable for 18"
+p18_0  = eqtype(eq1) : 2948;
+p18_1  = eqtype(eq1) : 2992;
+p18_2  = eqtype(eq1) : 3036;
+p18_3  = eqtype(eq1) : 3080;
+p18_4  = eqtype(eq1) : 3124;
+p18_5  = eqtype(eq1) : 3168;
+p18_6  = eqtype(eq1) : 3212;
+p18_7  = eqtype(eq1) : 3256;
+p18_8  = eqtype(eq1) : 3300;
+p18_9  = eqtype(eq1) : 3344;
+p18_10 = eqtype(eq1) : 3388;
+p18_11 = eqtype(eq1) : 3432;
+p18_12 = eqtype(eq1) : 3476;
+p18_13 = eqtype(eq1) : 3520;
+p18_14 = eqtype(eq1) : 3564;
+p18_15 = eqtype(eq1) : 3608;
+
+p17_oe = eqtype(eq1) : 3652;   "output enable for 17"
+p17_0  = eqtype(eq1) : 3696;
+p17_1  = eqtype(eq1) : 3740;
+p17_2  = eqtype(eq1) : 3784;
+p17_3  = eqtype(eq1) : 3828;
+p17_4  = eqtype(eq1) : 3872;
+p17_5  = eqtype(eq1) : 3916;
+p17_6  = eqtype(eq1) : 3960;
+p17_7  = eqtype(eq1) : 4004;
+p17_8  = eqtype(eq1) : 4048;
+p17_9  = eqtype(eq1) : 4092;
+p17_10 = eqtype(eq1) : 4136;
+p17_11 = eqtype(eq1) : 4180;
+p17_12 = eqtype(eq1) : 4224;
+p17_13 = eqtype(eq1) : 4268;
+
+p16_oe = eqtype(eq1) : 4312;   "output enable for 16"
+p16_0  = eqtype(eq1) : 4356;
+p16_1  = eqtype(eq1) : 4400;
+p16_2  = eqtype(eq1) : 4444;
+p16_3  = eqtype(eq1) : 4488;
+p16_4  = eqtype(eq1) : 4532;
+p16_5  = eqtype(eq1) : 4576;
+p16_6  = eqtype(eq1) : 4620;
+p16_7  = eqtype(eq1) : 4664;
+p16_8  = eqtype(eq1) : 4708;
+p16_9  = eqtype(eq1) : 4752;
+p16_10 = eqtype(eq1) : 4796;
+p16_11 = eqtype(eq1) : 4840;
+
+p15_oe = eqtype(eq1) : 4884;   "output enable for 15"
+p15_0  = eqtype(eq1) : 4928;
+p15_1  = eqtype(eq1) : 4972;
+p15_2  = eqtype(eq1) : 5016;
+p15_3  = eqtype(eq1) : 5060;
+p15_4  = eqtype(eq1) : 5104;
+p15_5  = eqtype(eq1) : 5148;
+p15_6  = eqtype(eq1) : 5192;
+p15_7  = eqtype(eq1) : 5236;
+p15_8  = eqtype(eq1) : 5280;
+p15_9  = eqtype(eq1) : 5324;
+
+p14_oe = eqtype(eq1) : 5368;   "output enable for 14"
+p14_0  = eqtype(eq1) : 5412;
+p14_1  = eqtype(eq1) : 5456;
+p14_2  = eqtype(eq1) : 5500;
+p14_3  = eqtype(eq1) : 5544;
+p14_4  = eqtype(eq1) : 5588;
+p14_5  = eqtype(eq1) : 5632;
+p14_6  = eqtype(eq1) : 5676;
+p14_7  = eqtype(eq1) : 5720;
+
+pt_sp = eqtype(eq1) : 5764;
+pt_ar = eqtype(eq1) : 0;
+
+pt_ground = ^0;
+
+or23 = @p23_0 + @p23_1 + @p23_2 + @p23_3 + @p23_4 + @p23_5 + @p23_6 + @p23_7;
+or22 = @p22_0 + @p22_1 + @p22_2 + @p22_3 + @p22_4 + @p22_5 + @p22_6 + @p22_7
+              + @p22_8 + @p22_9;
+or21 = @p21_0 + @p21_1 + @p21_2 + @p21_3  + @p21_4 + @p21_5 + @p21_6 + @p21_7
+              + @p21_8 + @p21_9 + @p21_10 + @p21_11;
+or20 = @p20_0 + @p20_1 + @p20_2 + @p20_3  + @p20_4 + @p20_5 + @p20_6 + @p20_7
+              + @p20_8 + @p20_9 + @p20_10 + @p20_11 + @p20_12+ @p20_13;
+or19 = @p19_0 + @p19_1 + @p19_2 + @p19_3  + @p19_4 + @p19_5 + @p19_6 + @p19_7
+              + @p19_8 + @p19_9 + @p19_10 + @p19_11
+              + @p19_12+ @p19_13+ @p19_14 + @p19_15;
+or18 = @p18_0 + @p18_1 + @p18_2 + @p18_3  + @p18_4 + @p18_5 + @p18_6 + @p18_7
+              + @p18_8 + @p18_9 + @p18_10 + @p18_11
+              + @p18_12+ @p18_13+ @p18_14 + @p18_15;
+or17 = @p17_0 + @p17_1 + @p17_2 + @p17_3  + @p17_4 + @p17_5 + @p17_6 + @p17_7
+              + @p17_8 + @p17_9 + @p17_10 + @p17_11 + @p17_12+ @p17_13;
+or16 = @p16_0 + @p16_1 + @p16_2 + @p16_3  + @p16_4 + @p16_5 + @p16_6 + @p16_7
+              + @p16_8 + @p16_9 + @p16_10 + @p16_11;
+or15 = @p15_0 + @p15_1 + @p15_2 + @p15_3 + @p15_4 + @p15_5 + @p15_6 + @p15_7
+              + @p15_8 + @p15_9;
+or14 = @p14_0 + @p14_1 + @p14_2 + @p14_3 + @p14_4 + @p14_5 + @p14_6 + @p14_7;
+end;
+
+PIN
+"
+specify the pins and the vector values they can take.
+Product terms are evaluated by using the @ symbol:
+  observe = @pt_obs : 0 () : 1 (25.Q);
+If observe PT is 0, then do nothing, else use Q output from pin 25.
+If a [.] follows @, then evaluate the PT again.
+"
+begin
+1 =
+  begin
+  val = \_clk_input;
+  end;
+2  =
+  begin
+  val = \_input;
+  end;
+3  =
+  begin
+  val = \_input;
+  end;
+4  =
+  begin
+  val = \_input;
+  end;
+5  =
+  begin
+  val = \_input;
+  end;
+6  =
+  begin
+  val = \_input;
+  end;
+7  =
+  begin
+  val = \_input;
+  end;
+8  =
+  begin
+  val = \_input;
+  end;
+9  =
+  begin
+  val = \_input;
+  end;
+10 =
+  begin
+  val = \_input;
+  end;
+11 =
+  begin
+  val = \_input;
+  end;
+12 =
+  begin
+  val = \_power;
+  end;
+13 =
+  begin
+  val = \_input;
+  end;
+14 =
+  begin
+  val = \_io;
+  reset = @pt_ar; "common reset term used here"
+  set = @pt_sp;
+  preload = @pt_ground : 0 (1 : 0 () : 1 (14)) : 1 (14);
+  clock = 1;
+  FF_type = 0;
+  storage_type = 0;
+  enable = @p14_oe;
+  mem0_input  = @or14;
+  mem_output  = 0;  "power-up reset, if not, put X"
+  out_element = !5826 : 0 > 14 active_low  <
+                          (!5827 : 0 > 14 registered    < (/14.Q)
+                                 : 1 > 14 combinatorial < (/@or14))
+              : 1 > 14 active_high <
+                          (!5827 : 0 > 14 registered    < ( 14.Q)
+                                 : 1 > 14 combinatorial < ( @or14));
+  end;
+15 =
+  begin
+  val = \_io;
+  reset = @pt_ar; "common reset term used here"
+  set = @pt_sp;
+  preload = @pt_ground : 0 (1 : 0 () : 1 (15)) : 1 (15);
+  clock = 1;
+  FF_type = 0;
+  storage_type = 0;
+  enable = @p15_oe;
+  mem0_input  = @or15;
+  mem_output  = 0;  "power-up reset, if not, put X"
+  out_element = !5824 : 0 > 15 active_low <
+                          (!5825 : 0 > 15 registered    < (/15.Q)
+                                 : 1 > 15 combinatorial < (/@or15))
+              : 1 > 15 active_high <
+                          (!5825 : 0 > 15 registered    < ( 15.Q)
+                                 : 1 > 15 combinatorial < ( @or15));
+  end;
+16 =
+  begin
+  val = \_io;
+  reset = @pt_ar; "common reset term used here"
+  set = @pt_sp;
+  preload = @pt_ground : 0 (1 : 0 () : 1 (16)) : 1 (16);
+  clock = 1;
+  FF_type = 0;
+  storage_type = 0;
+  enable = @p16_oe;
+  mem0_input  = @or16;
+  mem_output  = 0;  "power-up reset, if not, put X"
+  out_element = !5822 : 0 > 16 active_low <
+                          (!5823 : 0 > 16 registered    < (/16.Q)
+                                 : 1 > 16 combinatorial < (/@or16))
+              : 1 > 16 active_high <
+                          (!5823 : 0 > 16 registered    < ( 16.Q)
+                                 : 1 > 16 combinatorial < ( @or16));
+  end;
+17 =
+  begin
+  val = \_io;
+  reset = @pt_ar; "common reset term used here"
+  set = @pt_sp;
+  preload = @pt_ground : 0 (1 : 0 () : 1 (17)) : 1 (17);
+  clock = 1;
+  FF_type = 0;
+  storage_type = 0;
+  enable = @p17_oe;
+  mem0_input  = @or17;
+  mem_output  = 0;  "power-up reset, if not, put X"
+  out_element = !5820 : 0 > 17 active_low <
+                          (!5821 : 0 > 17 registered    < (/17.Q)
+                                 : 1 > 17 combinatorial < (/@or17))
+              : 1 > 17 active_high <
+                          (!5821 : 0 > 17 registered    < ( 17.Q)
+                                 : 1 > 17 combinatorial < ( @or17));
+  end;
+18 =
+  begin
+  val = \_io;
+  reset = @pt_ar; "common reset term used here"
+  set = @pt_sp;
+  preload = @pt_ground : 0 (1 : 0 () : 1 (18)) : 1 (18);
+  clock = 1;
+  FF_type = 0;
+  storage_type = 0;
+  enable = @p18_oe;
+  mem0_input  = @or18;
+  mem_output  = 0;  "power-up reset, if not, put X"
+  out_element = !5818 : 0 > 18 active_low <
+                          (!5819 : 0 > 18 registered    < (/18.Q)
+                                 : 1 > 18 combinatorial < (/@or18))
+              : 1 > 18 active_high <
+                          (!5819 : 0 > 18 registered    < ( 18.Q)
+                                 : 1 > 18 combinatorial < ( @or18));
+  end;
+19 =
+  begin
+  val = \_io;
+  reset = @pt_ar; "common reset term used here"
+  set = @pt_sp;
+  preload = @pt_ground : 0 (1 : 0 () : 1 (19)) : 1 (19);
+  clock = 1;
+  FF_type = 0;
+  storage_type = 0;
+  enable = @p19_oe;
+  mem0_input  = @or19;
+  mem_output  = 0;  "power-up reset, if not, put X"
+  out_element = !5816 : 0 > 19 active_low <
+                          (!5817 : 0 > 19 registered    < (/19.Q)
+                                 : 1 > 19 combinatorial < (/@or19))
+              : 1 > 19 active_high <
+                          (!5817 : 0 > 19 registered    < ( 19.Q)
+                                 : 1 > 19 combinatorial < ( @or19));
+  end;
+20 =
+  begin
+  val = \_io;
+  reset = @pt_ar; "common reset term used here"
+  set = @pt_sp;
+  preload = @pt_ground : 0 (1 : 0 () : 1 (20)) : 1 (20);
+  clock = 1;
+  FF_type = 0;
+  storage_type = 0;
+  enable = @p20_oe;
+  mem0_input  = @or20;
+  mem_output  = 0;  "power-up reset, if not, put X"
+  out_element = !5814 : 0 > 20 active_low <
+                          (!5815 : 0 > 20 registered    < (/20.Q)
+                                 : 1 > 20 combinatorial < (/@or20))
+              : 1 > 20 active_high <
+                          (!5815 : 0 > 20 registered    < ( 20.Q)
+                                 : 1 > 20 combinatorial < ( @or20));
+  end;
+21 =
+  begin
+  val = \_io;
+  reset = @pt_ar; "common reset term used here"
+  set = @pt_sp;
+  preload = @pt_ground : 0 (1 : 0 () : 1 (21)) : 1 (21);
+  clock = 1;
+  FF_type = 0;
+  storage_type = 0;
+  enable = @p21_oe;
+  mem0_input  = @or21;
+  mem_output  = 0;  "power-up reset, if not, put X"
+  out_element = !5812 : 0 > 21 active_low <
+                          (!5813 : 0 > 21 registered    < (/21.Q)
+                                 : 1 > 21 combinatorial < (/@or21))
+              : 1 > 21 active_high <
+                          (!5813 : 0 > 21 registered    < ( 21.Q)
+                                 : 1 > 21 combinatorial < ( @or21));
+  end;
+22 =
+  begin
+  val = \_io;
+  reset = @pt_ar; "common reset term used here"
+  set = @pt_sp;
+  preload = @pt_ground : 0 (1 : 0 () : 1 (22)) : 1 (22);
+  clock = 1;
+  FF_type = 0;
+  storage_type = 0;
+  enable = @p22_oe;
+  mem0_input  = @or22;
+  mem_output  = 0;  "power-up reset, if not, put X"
+  out_element = !5810 : 0 > 22 active_low <
+                          (!5811 : 0 > 22 registered    < (/22.Q)
+                                 : 1 > 22 combinatorial < (/@or22))
+              : 1 > 22 active_high <
+                          (!5811 : 0 > 22 registered    < ( 22.Q)
+                                 : 1 > 22 combinatorial < ( @or22));
+  end;
+23 =
+  begin
+  val = \_io;
+  reset = @pt_ar; "common reset term used here"
+  set = @pt_sp;
+  preload = @pt_ground : 0 (1 : 0 () : 1 (23)) : 1 (23);
+  clock = 1;
+  FF_type = 0;
+  storage_type = 0;
+  enable = @p23_oe;
+  mem0_input  = @or23;
+  mem_output  = 0;  "power-up reset, if not, put X"
+  out_element = !5808 : 0 > 23 active_low <
+                          (!5809 : 0 > 23 registered    < (/23.Q)
+                                 : 1 > 23 combinatorial < (/@or23))
+              : 1 > 23 active_high <
+                          (!5809 : 0 > 23 registered    < ( 23.Q)
+                                 : 1 > 23 combinatorial < ( @or23));
+  end;
+24 =
+  begin
+  val = \_power;
+  end;
+end; "PIN"
+END_DEF

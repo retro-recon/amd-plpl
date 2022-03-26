@@ -1,0 +1,109 @@
+"Database AmPAL20R8"
+24 24 40
+1  CLOCK @
+2  INPUT 0 1 2 0
+   0 0 0 0
+   # combinatorial -1
+   @
+3  INPUT 4 5 2 0
+   0 0 0 0
+   # combinatorial -1
+   @
+4  INPUT 8 9 2 0
+   0 0 0 0
+   # combinatorial -1
+   @
+5  INPUT 12 13 2 0
+   0 0 0 0
+   # combinatorial -1
+   @
+6  INPUT 16 17 2 0
+   0 0 0 0
+   # combinatorial -1
+   @
+7  INPUT 20 21 2 0
+   0 0 0 0
+   # combinatorial -1
+   @
+8  INPUT 24 25 2 0
+   0 0 0 0
+   # combinatorial -1
+   @
+9  INPUT 28 29 2 0
+   0 0 0 0
+   # combinatorial -1
+   @
+10 INPUT 32 33 2 0
+   0 0 0 0
+   # combinatorial -1
+   @
+11 INPUT 36 37 2 0
+   0 0 0 0
+   # combinatorial -1
+   @
+12 GND @
+13 CONTROL @
+14 INPUT 38 39 2 0
+   0 0 0 0
+   # combinatorial -1
+   @
+15 OUTPUT 34 35 3 1
+ 8 2240
+ 0 0 0
+ # ACTIVE_LOW -1
+ # REGISTERED -1
+ & ENABLE 13
+ @
+16 OUTPUT 30 31 3 1
+ 8 1920
+ 0 0 0
+ # ACTIVE_LOW -1
+ # REGISTERED -1
+ & ENABLE 13
+ @
+17 OUTPUT 26 27 3 1
+ 8 1600
+ 0 0 0
+ # ACTIVE_LOW -1
+ # REGISTERED -1
+ & ENABLE 13
+ @
+18 OUTPUT 22 23 3 1
+ 8 1280
+ 0 0 0
+ # ACTIVE_LOW -1
+ # REGISTERED -1
+ & ENABLE 13
+ @
+19 OUTPUT 18 19 3 1
+ 8 960
+ 0 0 0
+ # ACTIVE_LOW -1
+ # REGISTERED -1
+ & ENABLE 13
+ @
+20 OUTPUT 14 15 3 1
+ 8 640
+ 0 0 0
+ # ACTIVE_LOW -1
+ # REGISTERED -1
+ & ENABLE 13
+ @
+21 OUTPUT 10 11 3 1
+ 8 320
+ 0 0 0
+ # ACTIVE_LOW -1
+ # REGISTERED -1
+ & ENABLE 13
+ @
+22 OUTPUT 6 7 3 1
+X # ACTIVE_LOW -1
+ # REGISTERED -1
+ & ENABLE 13
+ @
+23 INPUT 2 3 2 0
+ 0 0 0 0
+ # combinatorial -1
+ @
+24 VCC @
+$

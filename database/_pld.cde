@@ -1,0 +1,69 @@
+"Nov. 4, 1987
+ PLD family/pin out codes; update when necessary"
+p16L8
+  data_io    AMD_9717   stag_ZL_30 AMD_9029 "STAG rev 30A01" @
+p16Ld8
+  data_io    AMD_9717   stag_ZL_30 AMD_9036 "STAG rev 30A01" @
+p16h8
+  data_io    AMD_9725   stag_ZL_30 AMD_9035 "STAG rev 30A01" @
+p16hd8
+  data_io    AMD_9725   stag_ZL_30 AMD_9037 "STAG rev 30A01" @
+p16r4
+  data_io    AMD_9781   stag_ZL_30 AMD_9032 "STAG rev 30A01" @
+p16r6
+  data_io    AMD_9780   stag_ZL_30 AMD_9031 "STAG rev 30A01" @
+p16r8
+  data_io    AMD_9782   stag_ZL_30 AMD_9030 "STAG rev 30A01" @
+p16p8
+  data_io    MMI_2230 @
+p18p8
+  data_io    AMD_9729   stag_ZL_30 AMD_9010 "STAG rev 30A01" @
+
+p22v10
+  data_io    AMD_9728   stag_ZL_30 AMD_9170 "STAG rev 30A01"
+  data_io    CMOS_6028 @
+
+p23s8
+  data_io    AMD_9784   stag_ZL_30 AMD_90128 @
+
+p20L8
+  data_io    AMD_9726   stag_ZL_30 AMD_91056 @
+p20L10
+  data_io    AMD_9706   stag_ZL_30 AMD_91060 @
+p20r4
+  data_io    AMD_9727   stag_ZL_30 AMD_91059 @
+p20r6
+  data_io    AMD_9727   stag_ZL_30 AMD_91058 @
+p20r8
+  data_io    AMD_9727   stag_ZL_30 AMD_91057 @
+
+p22p10
+  data_io    AMD_972B   stag_ZL_30 AMD_91121 @
+p20rp4
+  data_io    AMD_979C   stag_ZL_30 AMD_91150 @
+p20rp6
+  data_io    AMD_979D   stag_ZL_30 AMD_91151 @
+p20rp8
+  data_io    AMD_979E   stag_ZL_30 AMD_91152 @
+p20rp10
+  data_io    AMD_979F   stag_ZL_30 AMD_91129 @
+
+p22xp10
+  data_io    AMD_972C   stag_ZL_30 AMD_91120 @
+p20xrp4
+  data_io    AMD_970B   stag_ZL_30 AMD_91122 @
+p20xrp6
+  data_io    AMD_970C   stag_ZL_30 AMD_91123 @
+p20xrp8
+  data_io    AMD_970D   stag_ZL_30 AMD_91124 @
+p20xrp10
+  data_io    AMD_970E   stag_ZL_30 AMD_91134 @
+
+p20ra10
+  data_io    2245       stag 21077 @
+
+p29m16
+  data_io    AMD_604B @
+p29ma16
+  data_io    AMD_604C @
+$

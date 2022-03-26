@@ -1,0 +1,324 @@
+"Nov. 8, 1987 This is the simulation database file for the AmPAL20XRP8"
+BEGIN_DEF
+3290 24 24 40 "array size, number of pins, physical # of pins, # input"
+DEFINE
+begin
+_zener = 2,3,4,5,6,7,8,9;
+_input = 0,1,_zener,X,N,Z,F;
+_clock = C,K,P,B,F,_input;
+_clk_input = _input,_clock;
+_output = H,L,X,N,Z,F;
+_io    = _input,_output;
+_power = N;
+end; "DEFINE"
+
+EQ "a PLA may have more than one equation type"
+begin "eq (pt array width,array direction) = ...."
+eq1(40,1) = 2*/2*23*/23*3*/3*&fd22*/&fd22*4*/4*&fd21*/&fd21*5*/5 *
+            &fd20*/&fd20*6*/6*&fd19*/&fd19*7*/7*&fd18*/&fd18*8*/8 *
+            &fd17*/&fd17*9*/9*&fd16*/&fd16*10*/10*&fd15*/&fd15 *
+            11*/11*14*/14;
+end;  "EQ"
+NODE
+begin
+fd22 = /22.Q;
+fd21 = /21.Q;
+fd20 = /20.Q;
+fd19 = /19.Q;
+fd18 = /18.Q;
+fd17 = /17.Q;
+fd16 = /16.Q;
+fd15 = /15.Q;
+
+"EQTYPE specifies the equation format to use; the number
+ specifies the starting fuse address to form the equation"
+p23_oe = eqtype(eq1) : 0   ;
+p23_0  = eqtype(eq1) : 40  ;
+p23_1  = eqtype(eq1) : 80  ;
+p23_2  = eqtype(eq1) : 120 ;
+p23_3  = eqtype(eq1) : 160 ;
+p23_4  = eqtype(eq1) : 200 ;
+p23_5  = eqtype(eq1) : 240 ;
+p23_6  = eqtype(eq1) : 280 ;
+p23_7  = eqtype(eq1) : 320 ;
+p22_0  = eqtype(eq1) : 360 ;
+p22_1  = eqtype(eq1) : 400 ;
+p22_2  = eqtype(eq1) : 440 ;
+p22_3  = eqtype(eq1) : 480 ;
+p22_4  = eqtype(eq1) : 520 ;
+p22_5  = eqtype(eq1) : 560 ;
+p22_6  = eqtype(eq1) : 600 ;
+p22_7  = eqtype(eq1) : 640 ;
+p21_0  = eqtype(eq1) : 680 ;
+p21_1  = eqtype(eq1) : 720 ;
+p21_2  = eqtype(eq1) : 760 ;
+p21_3  = eqtype(eq1) : 800 ;
+p21_4  = eqtype(eq1) : 840 ;
+p21_5  = eqtype(eq1) : 880 ;
+p21_6  = eqtype(eq1) : 920 ;
+p21_7  = eqtype(eq1) : 960 ;
+p20_0  = eqtype(eq1) : 1000;
+p20_1  = eqtype(eq1) : 1040;
+p20_2  = eqtype(eq1) : 1080;
+p20_3  = eqtype(eq1) : 1120;
+p20_4  = eqtype(eq1) : 1160;
+p20_5  = eqtype(eq1) : 1200;
+p20_6  = eqtype(eq1) : 1240;
+p20_7  = eqtype(eq1) : 1280;
+p19_0  = eqtype(eq1) : 1320;
+p19_1  = eqtype(eq1) : 1360;
+p19_2  = eqtype(eq1) : 1400;
+p19_3  = eqtype(eq1) : 1440;
+p19_4  = eqtype(eq1) : 1480;
+p19_5  = eqtype(eq1) : 1520;
+p19_6  = eqtype(eq1) : 1560;
+p19_7  = eqtype(eq1) : 1600;
+p18_0  = eqtype(eq1) : 1640;
+p18_1  = eqtype(eq1) : 1680;
+p18_2  = eqtype(eq1) : 1720;
+p18_3  = eqtype(eq1) : 1760;
+p18_4  = eqtype(eq1) : 1800;
+p18_5  = eqtype(eq1) : 1840;
+p18_6  = eqtype(eq1) : 1880;
+p18_7  = eqtype(eq1) : 1920;
+p17_0  = eqtype(eq1) : 1960;
+p17_1  = eqtype(eq1) : 2000;
+p17_2  = eqtype(eq1) : 2040;
+p17_3  = eqtype(eq1) : 2080;
+p17_4  = eqtype(eq1) : 2120;
+p17_5  = eqtype(eq1) : 2160;
+p17_6  = eqtype(eq1) : 2200;
+p17_7  = eqtype(eq1) : 2240;
+p16_0  = eqtype(eq1) : 2280;
+p16_1  = eqtype(eq1) : 2320;
+p16_2  = eqtype(eq1) : 2360;
+p16_3  = eqtype(eq1) : 2400;
+p16_4  = eqtype(eq1) : 2440;
+p16_5  = eqtype(eq1) : 2480;
+p16_6  = eqtype(eq1) : 2520;
+p16_7  = eqtype(eq1) : 2560;
+p15_0  = eqtype(eq1) : 2600;
+p15_1  = eqtype(eq1) : 2640;
+p15_2  = eqtype(eq1) : 2680;
+p15_3  = eqtype(eq1) : 2720;
+p15_4  = eqtype(eq1) : 2760;
+p15_5  = eqtype(eq1) : 2800;
+p15_6  = eqtype(eq1) : 2840;
+p15_7  = eqtype(eq1) : 2880;
+p14_oe = eqtype(eq1) : 2920;
+p14_0  = eqtype(eq1) : 2960;
+p14_1  = eqtype(eq1) : 3000;
+p14_2  = eqtype(eq1) : 3040;
+p14_3  = eqtype(eq1) : 3080;
+p14_4  = eqtype(eq1) : 3120;
+p14_5  = eqtype(eq1) : 3160;
+p14_6  = eqtype(eq1) : 3200;
+p14_7  = eqtype(eq1) : 3240;
+
+or14 = @p14_0 + @p14_1 + @p14_2 + @p14_3 + @p14_4 + @p14_5 + @p14_6 + @p14_7;
+or15 = (@p15_0 + @p15_1) %
+           (@p15_2 + @p15_3 + @p15_4 + @p15_5 + @p15_6 + @p15_7);
+or16 = (@p16_0 + @p16_1) %
+           (@p16_2 + @p16_3 + @p16_4 + @p16_5 + @p16_6 + @p16_7);
+or17 = (@p17_0 + @p17_1) %
+           (@p17_2 + @p17_3 + @p17_4 + @p17_5 + @p17_6 + @p17_7);
+or18 = (@p18_0 + @p18_1) %
+           (@p18_2 + @p18_3 + @p18_4 + @p18_5 + @p18_6 + @p18_7);
+or19 = (@p19_0 + @p19_1) %
+           (@p19_2 + @p19_3 + @p19_4 + @p19_5 + @p19_6 + @p19_7);
+or20 = (@p20_0 + @p20_1) %
+           (@p20_2 + @p20_3 + @p20_4 + @p20_5 + @p20_6 + @p20_7);
+or21 = (@p21_0 + @p21_1) %
+           (@p21_2 + @p21_3 + @p21_4 + @p21_5 + @p21_6 + @p21_7);
+or22 = (@p22_0 + @p22_1) %
+           (@p22_2 + @p22_3 + @p22_4 + @p22_5 + @p22_6 + @p22_7);
+or23 = @p23_0 + @p23_1 + @p23_2 + @p23_3 + @p23_4 + @p23_5 + @p23_6 + @p23_7;
+
+pt_ground = ^0;
+end;
+
+PIN
+"
+specify the pins and the vector values they can take.
+Product terms are evaluated by using the @ symbol:
+  mem0_input  = @or14; /* input to output cell is @OR14 */
+"
+begin
+1 =
+  begin
+  val = \_clock;
+  end;
+2  =
+  begin
+  val = \_input;
+  end;
+3  =
+  begin
+  val = \_input;
+  end;
+4  =
+  begin
+  val = \_input;
+  end;
+5  =
+  begin
+  val = \_input;
+  end;
+6  =
+  begin
+  val = \_input;
+  end;
+7  =
+  begin
+  val = \_input;
+  end;
+8  =
+  begin
+  val = \_input;
+  end;
+9  =
+  begin
+  val = \_input;
+  end;
+10 =
+  begin
+  val = \_input;
+  end;
+11 =
+  begin
+  val = \_input;
+  end;
+12 =
+  begin
+  val = \_power;
+  end;
+13 =
+  begin
+  val = \_input;
+  end;
+14 =
+  begin
+  val = \_io;
+  enable = @p14_oe > 14 combinatorial <;
+  mem0_input  = @or14;
+  out_element = !3289 : 0 > 14 active_low  < (/@or14)
+                      : 1 > 14 active_high < (@or14);
+  end;
+15 =
+  begin
+  val = \_output;
+  preload = @pt_ground : 0 (1 : 0 () : 1 (15)) : 1 (15);
+  clock = 1;
+  FF_type = 0;
+  storage_type = 0;
+  enable = /13;  "active low and then inverted at reg output"
+  mem0_input  = !3288 : 0 > 15 active_low  < (@or15)
+                      : 1 > 15 active_high < (/@or15);
+  mem_output  = 0;
+  out_element = /15.Q > 15 registered <;
+  end;
+16 =
+  begin
+  val = \_output;
+  preload = @pt_ground : 0 (1 : 0 () : 1 (16)) : 1 (16);
+  clock = 1;
+  FF_type = 0;
+  storage_type = 0;
+  enable = /13;  "active low and then inverted at reg output"
+  mem0_input  = !3287 : 0 > 16 active_low  < (@or16)
+                      : 1 > 16 active_high < (/@or16);
+  mem_output  = 0;
+  out_element = /16.Q > 16 registered <;
+  end;
+17 =
+  begin
+  val = \_output;
+  preload = @pt_ground : 0 (1 : 0 () : 1 (17)) : 1 (17);
+  clock = 1;
+  FF_type = 0;
+  storage_type = 0;
+  enable = /13;  "active low and then inverted at reg output"
+  mem0_input  = !3286 : 0 > 17 active_low  < (@or17)
+                      : 1 > 17 active_high < (/@or17);
+  mem_output  = 0;
+  out_element = /17.Q > 17 registered <;
+  end;
+18 =
+  begin
+  val = \_output;
+  preload = @pt_ground : 0 (1 : 0 () : 1 (18)) : 1 (18);
+  clock = 1;
+  FF_type = 0;
+  storage_type = 0;
+  enable = /13;
+  mem0_input  = !3285 : 0 > 18 active_low  < (@or18)
+                      : 1 > 18 active_high < (/@or18);
+  mem_output  = 0;
+  out_element = /18.Q > 18 registered <;
+  end;
+19 =
+  begin
+  val = \_output;
+  preload = @pt_ground : 0 (1 : 0 () : 1 (19)) : 1 (19);
+  clock = 1;
+  FF_type = 0;
+  storage_type = 0;
+  enable = /13;
+  mem0_input  = !3284 : 0 > 19 active_low  < (@or19)
+                      : 1 > 19 active_high < (/@or19);
+  mem_output  = 0;
+  out_element = /19.Q > 19 registered <;
+  end;
+20 =
+  begin
+  val = \_output;
+  preload = @pt_ground : 0 (1 : 0 () : 1 (20)) : 1 (20);
+  clock = 1;
+  FF_type = 0;
+  storage_type = 0;
+  enable = /13;
+  mem0_input  = !3283 : 0 > 20 active_low  < (@or20)
+                      : 1 > 20 active_high < (/@or20);
+  mem_output  = 0;
+  out_element = /20.Q > 20 registered <;
+  end;
+21 =
+  begin
+  val = \_output;
+  preload = @pt_ground : 0 (1 : 0 () : 1 (21)) : 1 (21);
+  clock = 1;
+  FF_type = 0;
+  storage_type = 0;
+  enable = /13;
+  mem0_input  = !3282 : 0 > 21 active_low  < (@or21)
+                      : 1 > 21 active_high < (/@or21);
+  mem_output  = 0;
+  out_element = /21.Q > 21 registered <;
+  end;
+22 =
+  begin
+  val = \_output;
+  preload = @pt_ground : 0 (1 : 0 () : 1 (22)) : 1 (22);
+  clock = 1;
+  FF_type = 0;
+  storage_type = 0;
+  enable = /13;
+  mem0_input  = !3281 : 0 > 22 active_low  < (@or22)
+                      : 1 > 22 active_high < (/@or22);
+  mem_output  = 0;
+  out_element = /22.Q > 22 registered <;
+  end;
+23 =
+  begin
+  val = \_io;
+  enable = @p23_oe > 23 combinatorial <;
+  mem0_input  = @or23;
+  out_element = !3280 : 0 > 23 active_low  < (/@or23)
+                      : 1 > 23 active_high < (@or23);
+  end;
+24 =
+  begin
+  val = \_power;
+  end;
+end; "PIN"
+END_DEF

@@ -1,0 +1,221 @@
+"Simulation database AmPAL16L8"
+BEGIN_DEF
+2048 20 20 32
+DEFINE
+begin
+_zener = 2,3,4,5,6,7,8,9;
+_input = 0,1,_zener,X,N,Z,F;
+_clock = C,K,P,B,F,_input;
+_clk_input = _input,_clock;
+_output = H,L,X,N,Z,F;
+_io    = _input,_output;
+_power = N;
+end; "DEFINE"
+
+EQ
+begin
+eq1(32,1) = 2*/2*1*/1*3*/3*18*/18*
+            4*/4*17*/17*5*/5*16*/16*
+            6*/6*15*/15*7*/7*14*/14*
+            8*/8*13*/13*9*/9*11*/11;
+end;  "EQ"
+NODE
+begin
+"EQTYPE specifies the equation format to use; the number
+ specifies the starting fuse address to form the equation"
+p19_oe = eqtype(eq1) : 0  ;   "output enable for 19"
+p19_0  = eqtype(eq1) : 32 ;
+p19_1  = eqtype(eq1) : 64 ;
+p19_2  = eqtype(eq1) : 96 ;
+p19_3  = eqtype(eq1) : 128;
+p19_4  = eqtype(eq1) : 160;
+p19_5  = eqtype(eq1) : 192;
+p19_6  = eqtype(eq1) : 224;
+
+p18_oe = eqtype(eq1) : 256; "output enable for 18"
+p18_0  = eqtype(eq1) : 288 ;
+p18_1  = eqtype(eq1) : 320 ;
+p18_2  = eqtype(eq1) : 352 ;
+p18_3  = eqtype(eq1) : 384 ;
+p18_4  = eqtype(eq1) : 416 ;
+p18_5  = eqtype(eq1) : 448 ;
+p18_6  = eqtype(eq1) : 480 ;
+
+p17_oe = eqtype(eq1) : 512 ; "output enable for 17"
+p17_0  = eqtype(eq1) : 544 ;
+p17_1  = eqtype(eq1) : 576 ;
+p17_2  = eqtype(eq1) : 608 ;
+p17_3  = eqtype(eq1) : 640 ;
+p17_4  = eqtype(eq1) : 672 ;
+p17_5  = eqtype(eq1) : 704 ;
+p17_6  = eqtype(eq1) : 736 ;
+
+p16_oe = eqtype(eq1) : 768 ; "output enable for 16"
+p16_0  = eqtype(eq1) : 800 ;
+p16_1  = eqtype(eq1) : 832 ;
+p16_2  = eqtype(eq1) : 864 ;
+p16_3  = eqtype(eq1) : 896 ;
+p16_4  = eqtype(eq1) : 928 ;
+p16_5  = eqtype(eq1) : 960 ;
+p16_6  = eqtype(eq1) : 992 ;
+
+p15_oe = eqtype(eq1) : 1024 ; "output enable for 15"
+p15_0  = eqtype(eq1) : 1056;
+p15_1  = eqtype(eq1) : 1088;
+p15_2  = eqtype(eq1) : 1120;
+p15_3  = eqtype(eq1) : 1152;
+p15_4  = eqtype(eq1) : 1184;
+p15_5  = eqtype(eq1) : 1216;
+p15_6  = eqtype(eq1) : 1248;
+
+p14_oe = eqtype(eq1) : 1280; "output enable for 14"
+p14_0  = eqtype(eq1) : 1312;
+p14_1  = eqtype(eq1) : 1344;
+p14_2  = eqtype(eq1) : 1376;
+p14_3  = eqtype(eq1) : 1408;
+p14_4  = eqtype(eq1) : 1440;
+p14_5  = eqtype(eq1) : 1472;
+p14_6  = eqtype(eq1) : 1504;
+
+p13_oe = eqtype(eq1) : 1536; "output enable for 13"
+p13_0  = eqtype(eq1) : 1568;
+p13_1  = eqtype(eq1) : 1600;
+p13_2  = eqtype(eq1) : 1632;
+p13_3  = eqtype(eq1) : 1664;
+p13_4  = eqtype(eq1) : 1696;
+p13_5  = eqtype(eq1) : 1728;
+p13_6  = eqtype(eq1) : 1760;
+
+p12_oe = eqtype(eq1) : 1792; "output enable for 12"
+p12_0  = eqtype(eq1) : 1824;
+p12_1  = eqtype(eq1) : 1856;
+p12_2  = eqtype(eq1) : 1888;
+p12_3  = eqtype(eq1) : 1920;
+p12_4  = eqtype(eq1) : 1952;
+p12_5  = eqtype(eq1) : 1984;
+p12_6  = eqtype(eq1) : 2016;
+
+or12 = @p12_0 + @p12_1 + @p12_2 + @p12_3 + @p12_4 + @p12_5 + @p12_6;
+or13 = @p13_0 + @p13_1 + @p13_2 + @p13_3 + @p13_4 + @p13_5 + @p13_6;
+or14 = @p14_0 + @p14_1 + @p14_2 + @p14_3 + @p14_4 + @p14_5 + @p14_6;
+or15 = @p15_0 + @p15_1 + @p15_2 + @p15_3 + @p15_4 + @p15_5 + @p15_6;
+or16 = @p16_0 + @p16_1 + @p16_2 + @p16_3 + @p16_4 + @p16_5 + @p16_6;
+or17 = @p17_0 + @p17_1 + @p17_2 + @p17_3 + @p17_4 + @p17_5 + @p17_6;
+or18 = @p18_0 + @p18_1 + @p18_2 + @p18_3 + @p18_4 + @p18_5 + @p18_6;
+or19 = @p19_0 + @p19_1 + @p19_2 + @p19_3 + @p19_4 + @p19_5 + @p19_6;
+
+end;
+
+PIN
+"
+specify the pins and the vector values they can take.
+Product terms are evaluated by using the @ symbol:
+  mem0_input  = @or14; /* input to output cell is @OR14 */
+"
+begin
+1 =
+  begin
+  val = \_input;
+  end;
+2  =
+  begin
+  val = \_input;
+  end;
+3  =
+  begin
+  val = \_input;
+  end;
+4  =
+  begin
+  val = \_input;
+  end;
+5  =
+  begin
+  val = \_input;
+  end;
+6  =
+  begin
+  val = \_input;
+  end;
+7  =
+  begin
+  val = \_input;
+  end;
+8  =
+  begin
+  val = \_input;
+  end;
+9  =
+  begin
+  val = \_input;
+  end;
+10 =
+  begin
+  val = \_power;
+  end;
+11 =
+  begin
+  val = \_input;
+  end;
+12 =
+  begin
+  val = \_output;
+  enable = @p12_oe > 12 combinatorial <;
+  mem0_input = @or12;
+  out_element = /@or12 > 12 active_low <;
+  end;
+13 =
+  begin
+  val = \_io;
+  enable = @p13_oe > 13 combinatorial <;
+  mem0_input = @or13;
+  out_element = /@or13 > 13 active_low  <;
+  end;
+14 =
+  begin
+  val = \_io;
+  enable = @p14_oe > 14 combinatorial <;
+  mem0_input = @or14;
+  out_element = /@or14 > 14 active_low  <;
+  end;
+15 =
+  begin
+  val = \_io;
+  enable = @p15_oe > 15 combinatorial <;
+  mem0_input = @or15;
+  out_element = /@or15 > 15 active_low  <;
+  end;
+16 =
+  begin
+  val = \_io;
+  enable = @p16_oe > 16 combinatorial <;
+  mem0_input = @or16;
+  out_element = /@or16 > 16 active_low  <;
+  end;
+17 =
+  begin
+  val = \_io;
+  enable = @p17_oe > 17 combinatorial <;
+  mem0_input = @or17;
+  out_element = /@or17 > 17 active_low  <;
+  end;
+18 =
+  begin
+  val = \_io;
+  enable = @p18_oe > 18 combinatorial <;
+  mem0_input = @or18;
+  out_element = /@or18 > 18 active_low  <;
+  end;
+19 =
+  begin
+  val = \_output;
+  enable = @p19_oe > 19 combinatorial <;
+  mem0_input = @or19;
+  out_element = /@or19 > 19 active_low  <;
+  end;
+20 =
+  begin
+  val = \_power;
+  end;
+end; "PIN"
+END_DEF

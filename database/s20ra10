@@ -1,0 +1,410 @@
+"Simulation database PAL20RA10"
+BEGIN_DEF
+3210 24 24 40
+DEFINE
+begin
+_zener = 2,3,4,5,6,7,8,9;
+_input = 0,1,_zener,X,N,Z,F;
+_clock = C,K,P,B,F,_input;
+_clk_input = _input,_clock;
+_output = H,L,X,N,Z,F;
+_io    = _input,_output;
+_power = N;
+end; "DEFINE"
+
+EQ "a PLA may have more than one equation type"
+begin "eq (pt array width,array direction) = ...."
+eq1(40,1) =  2 * /2  * 23 * /23 *  3 * /3  * 22 * /22 *  4 * /4  * 21 * /21 *
+             5 * /5  * 20 * /20 *  6 * /6  * 19 * /19 *  7 * /7  * 18 * /18 *
+             8 * /8  * 17 * /17 *  9 * /9  * 16 * /16 * 10 * /10 * 15 * /15 *
+            11 * /11 * 14 * /14;
+end;  "EQ"
+NODE
+begin
+
+"EQTYPE specifies the equation format to use; the number
+ specifies the starting fuse address to form the equation"
+
+prload1 = /1;
+
+p23_oe  = eqtype(eq1) : 0 ;  "output enable for 23"
+p23_clk = eqtype(eq1) : 40;
+p23_rst = eqtype(eq1) : 80;
+p23_set = eqtype(eq1) : 120;
+p23_0   = eqtype(eq1) : 160;
+p23_1   = eqtype(eq1) : 200;
+p23_2   = eqtype(eq1) : 240;
+p23_3   = eqtype(eq1) : 280;
+
+p22_oe  = eqtype(eq1) : 320; "output enable for 22"
+p22_clk = eqtype(eq1) : 360;
+p22_rst = eqtype(eq1) : 400;
+p22_set = eqtype(eq1) : 440;
+p22_0   = eqtype(eq1) : 480;
+p22_1   = eqtype(eq1) : 520;
+p22_2   = eqtype(eq1) : 560;
+p22_3   = eqtype(eq1) : 600;
+
+p21_oe  = eqtype(eq1) : 640; "output enable for 21"
+p21_clk = eqtype(eq1) : 680;
+p21_rst = eqtype(eq1) : 720;
+p21_set = eqtype(eq1) : 760;
+p21_0   = eqtype(eq1) : 800;
+p21_1   = eqtype(eq1) : 840;
+p21_2   = eqtype(eq1) : 880;
+p21_3   = eqtype(eq1) : 920;
+
+p20_oe  = eqtype(eq1) : 960; "output enable for 20"
+p20_clk = eqtype(eq1) : 1000;
+p20_rst = eqtype(eq1) : 1040;
+p20_set = eqtype(eq1) : 1080;
+p20_0   = eqtype(eq1) : 1120;
+p20_1   = eqtype(eq1) : 1160;
+p20_2   = eqtype(eq1) : 1200;
+p20_3   = eqtype(eq1) : 1240;
+
+p19_oe  = eqtype(eq1) : 1280;   "output enable for 19"
+p19_clk = eqtype(eq1) : 1320;
+p19_rst = eqtype(eq1) : 1360;
+p19_set = eqtype(eq1) : 1400;
+p19_0   = eqtype(eq1) : 1440;
+p19_1   = eqtype(eq1) : 1480;
+p19_2   = eqtype(eq1) : 1520;
+p19_3   = eqtype(eq1) : 1560;
+
+p18_oe  = eqtype(eq1) : 1600;   "output enable for 18"
+p18_clk = eqtype(eq1) : 1640;
+p18_rst = eqtype(eq1) : 1680;
+p18_set = eqtype(eq1) : 1720;
+p18_0   = eqtype(eq1) : 1760;
+p18_1   = eqtype(eq1) : 1800;
+p18_2   = eqtype(eq1) : 1840;
+p18_3   = eqtype(eq1) : 1880;
+
+p17_oe  = eqtype(eq1) : 1920;   "output enable for 17"
+p17_clk = eqtype(eq1) : 1960;
+p17_rst = eqtype(eq1) : 2000;
+p17_set = eqtype(eq1) : 2040;
+p17_0   = eqtype(eq1) : 2080;
+p17_1   = eqtype(eq1) : 2120;
+p17_2   = eqtype(eq1) : 2160;
+p17_3   = eqtype(eq1) : 2200;
+
+p16_oe  = eqtype(eq1) : 2240;   "output enable for 16"
+p16_clk = eqtype(eq1) : 2280;
+p16_rst = eqtype(eq1) : 2320;
+p16_set = eqtype(eq1) : 2360;
+p16_0   = eqtype(eq1) : 2400;
+p16_1   = eqtype(eq1) : 2440;
+p16_2   = eqtype(eq1) : 2480;
+p16_3   = eqtype(eq1) : 2520;
+
+p15_oe  = eqtype(eq1) : 2560;   "output enable for 15"
+p15_clk = eqtype(eq1) : 2600;
+p15_rst = eqtype(eq1) : 2640;
+p15_set = eqtype(eq1) : 2680;
+p15_0   = eqtype(eq1) : 2720;
+p15_1   = eqtype(eq1) : 2760;
+p15_2   = eqtype(eq1) : 2800;
+p15_3   = eqtype(eq1) : 2840;
+
+p14_oe  = eqtype(eq1) : 2880;   "output enable for 14"
+p14_clk = eqtype(eq1) : 2920;
+p14_rst = eqtype(eq1) : 2960;
+p14_set = eqtype(eq1) : 3000;
+p14_0   = eqtype(eq1) : 3040;
+p14_1   = eqtype(eq1) : 3080;
+p14_2   = eqtype(eq1) : 3120;
+p14_3   = eqtype(eq1) : 3160;
+
+or23 = @p23_0 + @p23_1 + @p23_2 + @p23_3 ;
+or22 = @p22_0 + @p22_1 + @p22_2 + @p22_3 ;
+or21 = @p21_0 + @p21_1 + @p21_2 + @p21_3 ;
+or20 = @p20_0 + @p20_1 + @p20_2 + @p20_3 ;
+or19 = @p19_0 + @p19_1 + @p19_2 + @p19_3 ;
+or18 = @p18_0 + @p18_1 + @p18_2 + @p18_3 ;
+or17 = @p17_0 + @p17_1 + @p17_2 + @p17_3 ;
+or16 = @p16_0 + @p16_1 + @p16_2 + @p16_3 ;
+or15 = @p15_0 + @p15_1 + @p15_2 + @p15_3 ;
+or14 = @p14_0 + @p14_1 + @p14_2 + @p14_3 ;
+
+flow23 = @p23_rst * @p23_set;
+flow22 = @p22_rst * @p22_set;
+flow21 = @p21_rst * @p21_set;
+flow20 = @p20_rst * @p20_set;
+flow19 = @p19_rst * @p19_set;
+flow18 = @p18_rst * @p18_set;
+flow17 = @p17_rst * @p17_set;
+flow16 = @p16_rst * @p16_set;
+flow15 = @p15_rst * @p15_set;
+flow14 = @p14_rst * @p14_set;
+
+pin14enb = @p14_oe*/13;
+pin15enb = @p15_oe*/13;
+pin16enb = @p16_oe*/13;
+pin17enb = @p17_oe*/13;
+pin18enb = @p18_oe*/13;
+pin19enb = @p19_oe*/13;
+pin20enb = @p20_oe*/13;
+pin21enb = @p21_oe*/13;
+pin22enb = @p22_oe*/13;
+pin23enb = @p23_oe*/13;
+end;
+
+PIN
+"
+specify the pins and the vector values they can take.
+Product terms are evaluated by using the @ symbol:
+  observe = @pt_obs : 0 () : 1 (25.Q);
+If observe PT is 0, then do nothing, else use Q output from pin 25.
+If a [.] follows @, then evaluate the PT again.
+"
+begin
+1 =
+  begin
+  val = \_input;
+  end;
+2  =
+  begin
+  val = \_input;
+  end;
+3  =
+  begin
+  val = \_input;
+  end;
+4  =
+  begin
+  val = \_input;
+  end;
+5  =
+  begin
+  val = \_input;
+  end;
+6  =
+  begin
+  val = \_input;
+  end;
+7  =
+  begin
+  val = \_input;
+  end;
+8  =
+  begin
+  val = \_input;
+  end;
+9  =
+  begin
+  val = \_input;
+  end;
+10 =
+  begin
+  val = \_input;
+  end;
+11 =
+  begin
+  val = \_input;
+  end;
+12 =
+  begin
+  val = \_power;
+  end;
+13 =
+  begin
+  val = \_input;
+  end;
+14 =
+  begin
+  val = \_io;
+  reset = @p14_rst; "common reset term used here"
+  set = @p14_set;
+  preload = @prload1 : 0 () : 1 (14);
+  clock = @p14_clk;
+  FF_type = 0;
+  storage_type = 0;
+  enable = @pin14enb;
+  mem0_input  = @or14;
+  mem_output  = 0;  "power-up reset, if not, put X"
+  out_element = !3209 : 0 > 14 active_low  <
+                          (@flow14 : 0 > 14 registered    < (/14.Q)
+                                   : 1 (/@or14))
+              : 1 > 14 active_high <
+                          (@flow14 : 0 > 14 registered    < ( 14.Q)
+                                   : 1 ( @or14));
+  end;
+15 =
+  begin
+  val = \_io;
+  reset = @p15_rst; "common reset term used here"
+  set = @p15_set;
+  preload = @prload1 : 0 () : 1 (15);
+  clock = @p15_clk;
+  FF_type = 0;
+  storage_type = 0;
+  enable = @pin15enb;
+  mem0_input  = @or15;
+  mem_output  = 0;  "power-up reset, if not, put X"
+  out_element = !3208 : 0 > 15 active_low <
+                          (@flow15 : 0 > 15 registered    < (/15.Q)
+                                   : 1 (/@or15))
+              : 1 > 15 active_high <
+                          (@flow15 : 0 > 15 registered    < ( 15.Q)
+                                   : 1 ( @or15));
+  end;
+16 =
+  begin
+  val = \_io;
+  reset = @p16_rst; "common reset term used here"
+  set = @p16_set;
+  preload = @prload1 : 0 () : 1 (16);
+  clock = @p16_clk;
+  FF_type = 0;
+  storage_type = 0;
+  enable = @pin16enb;
+  mem0_input  = @or16;
+  mem_output  = 0;  "power-up reset, if not, put X"
+  out_element = !3207 : 0 > 16 active_low <
+                          (@flow16 : 0 > 16 registered    < (/16.Q)
+                                   : 1 (/@or16))
+              : 1 > 16 active_high <
+                          (@flow16 : 0 > 16 registered    < ( 16.Q)
+                                   : 1 ( @or16));
+  end;
+17 =
+  begin
+  val = \_io;
+  reset = @p17_rst; "common reset term used here"
+  set = @p17_set;
+  preload = @prload1 : 0 () : 1 (17);
+  clock = @p17_clk;
+  FF_type = 0;
+  storage_type = 0;
+  enable = @pin17enb;
+  mem0_input  = @or17;
+  mem_output  = 0;  "power-up reset, if not, put X"
+  out_element = !3206 : 0 > 17 active_low <
+                          (@flow17 : 0 > 17 registered    < (/17.Q)
+                                   : 1 (/@or17))
+              : 1 > 17 active_high <
+                          (@flow17 : 0 > 17 registered    < ( 17.Q)
+                                   : 1 ( @or17));
+  end;
+18 =
+  begin
+  val = \_io;
+  reset = @p18_rst; "common reset term used here"
+  set = @p18_set;
+  preload = @prload1 : 0 () : 1 (18);
+  clock = @p18_clk;
+  FF_type = 0;
+  storage_type = 0;
+  enable = @pin18enb;
+  mem0_input  = @or18;
+  mem_output  = 0;  "power-up reset, if not, put X"
+  out_element = !3205 : 0 > 18 active_low <
+                          (@flow18 : 0 > 18 registered    < (/18.Q)
+                                   : 1 (/@or18))
+              : 1 > 18 active_high <
+                          (@flow18 : 0 > 18 registered    < ( 18.Q)
+                                   : 1 ( @or18));
+  end;
+19 =
+  begin
+  val = \_io;
+  reset = @p19_rst; "common reset term used here"
+  set = @p19_set;
+  preload = @prload1 : 0 () : 1 (19);
+  clock = @p19_clk;
+  FF_type = 0;
+  storage_type = 0;
+  enable = @pin19enb;
+  mem0_input  = @or19;
+  mem_output  = 0;  "power-up reset, if not, put X"
+  out_element = !3204 : 0 > 19 active_low <
+                          (@flow19 : 0 > 19 registered    < (/19.Q)
+                                   : 1 (/@or19))
+              : 1 > 19 active_high <
+                          (@flow19 : 0 > 19 registered    < ( 19.Q)
+                                   : 1 ( @or19));
+  end;
+20 =
+  begin
+  val = \_io;
+  reset = @p20_rst; "common reset term used here"
+  set = @p20_set;
+  preload = @prload1 : 0 () : 1 (20);
+  clock = @p20_clk;
+  FF_type = 0;
+  storage_type = 0;
+  enable = @pin20enb;
+  mem0_input  = @or20;
+  mem_output  = 0;  "power-up reset, if not, put X"
+  out_element = !3203 : 0 > 20 active_low <
+                          (@flow20 : 0 > 20 registered    < (/20.Q)
+                                   : 1 (/@or20))
+              : 1 > 20 active_high <
+                          (@flow20 : 0 > 20 registered    < ( 20.Q)
+                                   : 1 ( @or20));
+  end;
+21 =
+  begin
+  val = \_io;
+  reset = @p21_rst; "common reset term used here"
+  set = @p21_set;
+  preload = @prload1 : 0 () : 1 (21);
+  clock = @p21_clk;
+  FF_type = 0;
+  storage_type = 0;
+  enable = @pin21enb;
+  mem0_input  = @or21;
+  mem_output  = 0;  "power-up reset, if not, put X"
+  out_element = !3202 : 0 > 21 active_low <
+                          (@flow21 : 0 > 21 registered    < (/21.Q)
+                                   : 1 (/@or21))
+              : 1 > 21 active_high <
+                          (@flow21 : 0 > 21 registered    < ( 21.Q)
+                                   : 1 ( @or21));
+  end;
+22 =
+  begin
+  val = \_io;
+  reset = @p22_rst; "common reset term used here"
+  set = @p22_set;
+  preload = @prload1 : 0 () : 1 (22);
+  clock = @p22_clk;
+  FF_type = 0;
+  storage_type = 0;
+  enable = @pin22enb;
+  mem0_input  = @or22;
+  mem_output  = 0;  "power-up reset, if not, put X"
+  out_element = !3201 : 0 > 22 active_low <
+                          (@flow22 : 0 > 22 registered    < (/22.Q)
+                                   : 1 (/@or22))
+              : 1 > 22 active_high <
+                          (@flow22 : 0 > 22 registered    < ( 22.Q)
+                                   : 1 ( @or22));
+  end;
+23 =
+  begin
+  val = \_io;
+  reset = @p23_rst; "common reset term used here"
+  set = @p23_set;
+  preload = @prload1 : 0 () : 1 (23);
+  clock = @p23_clk;
+  FF_type = 0;
+  storage_type = 0;
+  enable = @pin23enb;
+  mem0_input  = @or23;
+  mem_output  = 0;  "power-up reset, if not, put X"
+  out_element = !3200 : 0 > 23 active_low <
+                          (@flow23 : 0 > 23 registered    < (/23.Q)
+                                   : 1 (/@or23))
+              : 1 > 23 active_high <
+                          (@flow23 : 0 > 23 registered    < ( 23.Q)
+                                   : 1 ( @or23));
+  end;
+24 =
+  begin
+  val = \_power;
+  end;
+end; "PIN"
+END_DEF

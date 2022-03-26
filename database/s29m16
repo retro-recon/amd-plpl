@@ -1,0 +1,674 @@
+"Simulation database AmPAL29M16"
+BEGIN_DEF
+11040 32 24 58
+DEFINE
+begin
+_zener = 2,3,4,5,6,7,8,9;
+_input = 0,1,_zener,X,N,Z,F;
+_clock = C,K,P,B,F,_input;
+_clk_input = _input,_clock;
+_output = H,L,X,N,Z,F;
+_io    = _input,_output;
+_power = N;
+end; "DEFINE"
+
+EQ "a PLA may have more than one equation type"
+begin "eq (pt array width,array direction) = ...."
+eq1(58,1) = 2*/2*3*/3*&fd25*/&fd25*4*/4*
+       &fd26*/&fd26*&fd5*/&fd5*&fd6*/&fd6*&fd7*/&fd7*
+       &fd8*/&fd8*9*/9*&fd27*/&fd27*10*/10*
+       &fd28*/&fd28*11*/11*13*/13*14*/14*
+       15*/15*&fd29*/&fd29*16*/16*&fd30*/&fd30*
+       &fd17*/&fd17*&fd18*/&fd18*&fd19*/&fd19*
+       &fd20*/&fd20*21*/21*&fd31*/&fd31*22*/22*
+       &fd32*/&fd32*23*/23;
+end;  "EQ"
+
+NODE
+begin
+fd5  = !10944 : 0 ( 5 )  : 1 ( /5.Q );
+fd6  = !10962 : 0 ( 6 )  : 1 ( /6.Q );
+fd7  = !10980 : 0 ( 7 )  : 1 ( /7.Q );
+fd8  = !10998 : 0 ( 8 )  : 1 ( /8.Q );
+fd17 = !11007 : 0 ( 17 ) : 1 ( /17.Q );
+fd18 = !10989 : 0 ( 18 ) : 1 ( /18.Q );
+fd19 = !10971 : 0 ( 19 ) : 1 ( /19.Q );
+fd20 = !10953 : 0 ( 20 ) : 1 ( /20.Q );
+
+fd25 = /25.Q;
+fd26 = /26.Q;
+fd27 = /27.Q;
+fd28 = /28.Q;
+fd29 = /29.Q;
+fd30 = /30.Q;
+fd31 = /31.Q;
+fd32 = /32.Q;
+
+"EQTYPE specifies the equation format to use; the number
+ specifies the starting fuse address to form the equation"
+pt0  = eqtype(eq1)  : 0;   "output 3"
+pt1  = eqtype(eq1)  : 58;
+pt2  = eqtype(eq1)  : 116;
+pt3  = eqtype(eq1)  : 174;
+pt4  = eqtype(eq1)  : 232;
+pt5  = eqtype(eq1)  : 290;
+pt6  = eqtype(eq1)  : 348;
+pt7  = eqtype(eq1)  : 406;
+
+pt8  = eqtype(eq1)  : 464;  "xor1"
+pt9  = eqtype(eq1)  : 522;  "xor1"
+pt10 = eqtype(eq1)  : 580;  "observe pt"
+
+pt11 = eqtype(eq1)  : 638;  "output 22"
+pt12 = eqtype(eq1)  : 696;
+pt13 = eqtype(eq1)  : 754;
+pt14 = eqtype(eq1)  : 812;
+pt15 = eqtype(eq1)  : 870;
+pt16 = eqtype(eq1)  : 928;
+pt17 = eqtype(eq1)  : 986;
+pt18 = eqtype(eq1)  : 1044;
+
+pt19 = eqtype(eq1)  : 1102;  "xor2"
+pt20 = eqtype(eq1)  : 1160;  "xor2"
+pt21 = eqtype(eq1)  : 1218;  "reset pt"
+
+pt22 = eqtype(eq1)  : 1276;  "output 4"
+pt23 = eqtype(eq1)  : 1334;
+pt24 = eqtype(eq1)  : 1392;
+pt25 = eqtype(eq1)  : 1450;
+pt26 = eqtype(eq1)  : 1508;
+pt27 = eqtype(eq1)  : 1566;
+pt28 = eqtype(eq1)  : 1624;
+pt29 = eqtype(eq1)  : 1682;
+
+pt30 = eqtype(eq1)  : 1740;  "output 21"
+pt31 = eqtype(eq1)  : 1798;
+pt32 = eqtype(eq1)  : 1856;
+pt33 = eqtype(eq1)  : 1914;
+pt34 = eqtype(eq1)  : 1972;
+pt35 = eqtype(eq1)  : 2030;
+pt36 = eqtype(eq1)  : 2088;
+pt37 = eqtype(eq1)  : 2146;
+
+pt38 = eqtype(eq1)  : 2204;  "output 5"
+pt39 = eqtype(eq1)  : 2262;
+pt40 = eqtype(eq1)  : 2320;
+pt41 = eqtype(eq1)  : 2378;
+pt42 = eqtype(eq1)  : 2436;
+pt43 = eqtype(eq1)  : 2494;
+pt44 = eqtype(eq1)  : 2552;
+pt45 = eqtype(eq1)  : 2610;
+pt46 = eqtype(eq1)  : 2668;
+pt47 = eqtype(eq1)  : 2726;
+pt48 = eqtype(eq1)  : 2784;
+pt49 = eqtype(eq1)  : 2842;
+
+pt50 = eqtype(eq1)  : 2900;  "output 20"
+pt51 = eqtype(eq1)  : 2958;
+pt52 = eqtype(eq1)  : 3016;
+pt53 = eqtype(eq1)  : 3074;
+pt54 = eqtype(eq1)  : 3132;
+pt55 = eqtype(eq1)  : 3190;
+pt56 = eqtype(eq1)  : 3248;
+pt57 = eqtype(eq1)  : 3306;
+pt58 = eqtype(eq1)  : 3364;
+pt59 = eqtype(eq1)  : 3422;
+pt60 = eqtype(eq1)  : 3480;
+pt61 = eqtype(eq1)  : 3538;
+
+pt62 = eqtype(eq1)  : 3596;  "output 6"
+pt63 = eqtype(eq1)  : 3654;
+pt64 = eqtype(eq1)  : 3712;
+pt65 = eqtype(eq1)  : 3770;
+pt66 = eqtype(eq1)  : 3828;
+pt67 = eqtype(eq1)  : 3886;
+pt68 = eqtype(eq1)  : 3944;
+pt69 = eqtype(eq1)  : 4002;
+pt70 = eqtype(eq1)  : 4060;
+pt71 = eqtype(eq1)  : 4118;
+pt72 = eqtype(eq1)  : 4176;
+pt73 = eqtype(eq1)  : 4234;
+pt74 = eqtype(eq1)  : 4292;
+pt75 = eqtype(eq1)  : 4350;
+pt76 = eqtype(eq1)  : 4408;
+pt77 = eqtype(eq1)  : 4466;
+
+pt78 = eqtype(eq1)  : 4524;  "output 19"
+pt79 = eqtype(eq1)  : 4582;
+pt80 = eqtype(eq1)  : 4640;
+pt81 = eqtype(eq1)  : 4698;
+pt82 = eqtype(eq1)  : 4756;
+pt83 = eqtype(eq1)  : 4814;
+pt84 = eqtype(eq1)  : 4872;
+pt85 = eqtype(eq1)  : 4930;
+pt86 = eqtype(eq1)  : 4988;
+pt87 = eqtype(eq1)  : 5046;
+pt88 = eqtype(eq1)  : 5104;
+pt89 = eqtype(eq1)  : 5162;
+pt90 = eqtype(eq1)  : 5220;
+pt91 = eqtype(eq1)  : 5278;
+pt92 = eqtype(eq1)  : 5336;
+pt93 = eqtype(eq1)  : 5394;
+
+pt94 = eqtype(eq1)  : 5452;  "output 7"
+pt95 = eqtype(eq1)  : 5510;
+pt96 = eqtype(eq1)  : 5568;
+pt97 = eqtype(eq1)  : 5626;
+pt98 = eqtype(eq1)  : 5684;
+pt99 = eqtype(eq1)  : 5742;
+pt100 = eqtype(eq1) : 5800;
+pt101 = eqtype(eq1) : 5858;
+pt102 = eqtype(eq1) : 5916;
+pt103 = eqtype(eq1) : 5974;
+pt104 = eqtype(eq1) : 6032;
+pt105 = eqtype(eq1) : 6090;
+pt106 = eqtype(eq1) : 6148;
+pt107 = eqtype(eq1) : 6206;
+pt108 = eqtype(eq1) : 6264;
+pt109 = eqtype(eq1) : 6322;
+
+pt110 = eqtype(eq1) : 6380;  "output 18"
+pt111 = eqtype(eq1) : 6438;
+pt112 = eqtype(eq1) : 6496;
+pt113 = eqtype(eq1) : 6554;
+pt114 = eqtype(eq1) : 6612;
+pt115 = eqtype(eq1) : 6670;
+pt116 = eqtype(eq1) : 6728;
+pt117 = eqtype(eq1) : 6786;
+pt118 = eqtype(eq1) : 6844;
+pt119 = eqtype(eq1) : 6902;
+pt120 = eqtype(eq1) : 6960;
+pt121 = eqtype(eq1) : 7018;
+pt122 = eqtype(eq1) : 7076;
+pt123 = eqtype(eq1) : 7134;
+pt124 = eqtype(eq1) : 7192;
+pt125 = eqtype(eq1) : 7250;
+
+pt126 = eqtype(eq1) : 7308;  "output 8"
+pt127 = eqtype(eq1) : 7366;
+pt128 = eqtype(eq1) : 7424;
+pt129 = eqtype(eq1) : 7482;
+pt130 = eqtype(eq1) : 7540;
+pt131 = eqtype(eq1) : 7598;
+pt132 = eqtype(eq1) : 7656;
+pt133 = eqtype(eq1) : 7714;
+pt134 = eqtype(eq1) : 7772;
+pt135 = eqtype(eq1) : 7830;
+pt136 = eqtype(eq1) : 7888;
+pt137 = eqtype(eq1) : 7946;
+
+pt138 = eqtype(eq1) : 8004;  "output 17"
+pt139 = eqtype(eq1) : 8062;
+pt140 = eqtype(eq1) : 8120;
+pt141 = eqtype(eq1) : 8178;
+pt142 = eqtype(eq1) : 8236;
+pt143 = eqtype(eq1) : 8294;
+pt144 = eqtype(eq1) : 8352;
+pt145 = eqtype(eq1) : 8410;
+pt146 = eqtype(eq1) : 8468;
+pt147 = eqtype(eq1) : 8526;
+pt148 = eqtype(eq1) : 8584;
+pt149 = eqtype(eq1) : 8642;
+
+pt150 = eqtype(eq1) : 8700;  "output 9"
+pt151 = eqtype(eq1) : 8758;
+pt152 = eqtype(eq1) : 8816;
+pt153 = eqtype(eq1) : 8874;
+pt154 = eqtype(eq1) : 8932;
+pt155 = eqtype(eq1) : 8990;
+pt156 = eqtype(eq1) : 9048;
+pt157 = eqtype(eq1) : 9106;
+
+pt158 = eqtype(eq1) : 9164;  "output 16"
+pt159 = eqtype(eq1) : 9222;
+pt160 = eqtype(eq1) : 9280;
+pt161 = eqtype(eq1) : 9338;
+pt162 = eqtype(eq1) : 9396;
+pt163 = eqtype(eq1) : 9454;
+pt164 = eqtype(eq1) : 9512;
+pt165 = eqtype(eq1) : 9570;
+
+pt166 = eqtype(eq1) : 9628;  "output 10"
+pt167 = eqtype(eq1) : 9686;
+pt168 = eqtype(eq1) : 9744;
+pt169 = eqtype(eq1) : 9802;
+pt170 = eqtype(eq1) : 9860;
+pt171 = eqtype(eq1) : 9918;
+pt172 = eqtype(eq1) : 9976;
+pt173 = eqtype(eq1) : 10034;
+
+pt174 = eqtype(eq1) : 10092;  "xor3"
+pt175 = eqtype(eq1) : 10150;  "xor3"
+pt176 = eqtype(eq1) : 10208;  "preload pt"
+
+pt177 = eqtype(eq1) : 10266;  "output 15"
+pt178 = eqtype(eq1) : 10324;
+pt179 = eqtype(eq1) : 10382;
+pt180 = eqtype(eq1) : 10440;
+pt181 = eqtype(eq1) : 10498;
+pt182 = eqtype(eq1) : 10556;
+pt183 = eqtype(eq1) : 10614;
+pt184 = eqtype(eq1) : 10672;
+
+pt185 = eqtype(eq1) : 10730;  "xor4"
+pt186 = eqtype(eq1) : 10788;  "xor4"
+pt187 = eqtype(eq1) : 10846;  "reset pt"
+
+or3  = @pt0 + @pt1 + @pt2 + @pt3 + @pt4 + @pt5 + @pt6 + @pt7;
+or22 = @pt11 + @pt12 + @pt13 + @pt14 + @pt15 + @pt16 + @pt17 + @pt18;
+or4  = @pt22 + @pt23 + @pt24 + @pt25 + @pt26 + @pt27 + @pt28 + @pt29;
+or21 = @pt30 + @pt31 + @pt32 + @pt33 + @pt34 + @pt35 + @pt36 + @pt37;
+or5  = @pt38 + @pt39 + @pt40 + @pt41 + @pt42 + @pt43 + @pt44 + @pt45 +
+    @pt46 + @pt47 + @pt48 + @pt49;
+or20 = @pt50 + @pt51 + @pt52 + @pt53 + @pt54 + @pt55 + @pt56 + @pt57 +
+    @pt58 + @pt59 + @pt60 + @pt61;
+or6  = @pt62 + @pt63 + @pt64 + @pt65 + @pt66 + @pt67 + @pt68 + @pt69 +
+    @pt70 + @pt71 + @pt72 + @pt73 + @pt74 + @pt75 + @pt76 + @pt77;
+or19 = @pt78 + @pt79 + @pt80 + @pt81 + @pt82 + @pt83 + @pt84 + @pt85 +
+    @pt86 + @pt87 + @pt88 + @pt89 + @pt90 + @pt91 + @pt92 + @pt93;
+or7  = @pt94 + @pt95 + @pt96 + @pt97 + @pt98 + @pt99 + @pt100 + @pt101 +
+    @pt102 + @pt103 + @pt104 + @pt105 + @pt106 + @pt107 + @pt108 + @pt109;
+or18 = @pt110 + @pt111 + @pt112 + @pt113 + @pt114 + @pt115 + @pt116 + @pt117 +
+    @pt118 + @pt119 + @pt120 + @pt121 + @pt122 + @pt123 + @pt124 + @pt125;
+or8  = @pt126 + @pt127 + @pt128 + @pt129 + @pt130 + @pt131 + @pt132 + @pt133 +
+    @pt134 + @pt135 + @pt136 + @pt137;
+or17 = @pt138 + @pt139 + @pt140 + @pt141 + @pt142 + @pt143 + @pt144 + @pt145 +
+    @pt146 + @pt147 + @pt148 + @pt149;
+or9  = @pt150 + @pt151 + @pt152 + @pt153 + @pt154 + @pt155 + @pt156 + @pt157;
+or16 = @pt158 + @pt159 + @pt160 + @pt161 + @pt162 + @pt163 + @pt164 + @pt165;
+or10 = @pt166 + @pt167 + @pt168 + @pt169 + @pt170 + @pt171 + @pt172 + @pt173;
+or15 = @pt177 + @pt178 + @pt179 + @pt180 + @pt181 + @pt182 + @pt183 + @pt184;
+
+xor_enable1 = @pt8 % @pt9;
+xor_enable2 = @pt174 % @pt175;
+xor_enable3 = @pt185 % @pt186;
+xor_enable4 = @pt19 % @pt20;
+end;
+
+PIN
+"
+specify the pins and the vector values they can take.
+Product terms are evaluated by using the @ symbol:
+  observe = @pt8 : 0 () : 1 (25.mem_output);
+If PT8 is 0, then do nothing, else use MEM_OUTPUT from pin 25.
+If a [.] follows @, then evaluate the PT again.
+"
+begin
+1 =
+  begin
+  val = \_clock;
+  end;
+2  =
+  begin
+  val = \_input;
+  end;
+3  =
+  begin
+  val = \_io;
+  observe = @pt8 : 0 () : 1 (25.Q);
+  enable = !10910 : 0 (!10911 : 0 (^0) : 1 (^1))
+          : 1 (!10911 : 0 (@xor_enable1) : 1 (/11));
+  mem_output  = 0;  "power-up reset, if not, put 1"
+  out_element = !10904 : 0 (!10905 : 0 ( 25.Q) : 1 (@or3))
+               : 1 (!10905 : 0 (/25.Q) : 1 (/@or3));
+  end;
+4  =
+  begin
+  val = \_io;
+  observe = @pt8 : 0 () : 1 (26.Q);
+  enable = !10926 : 0 (!10927 : 0 (^0) : 1 (^1))
+          : 1 (!10927 : 0 (@xor_enable1) : 1 (/11));
+  mem_output  = 0;
+  out_element = !10920 : 0 (!10921 : 0 ( 26.Q) : 1 (@or4))
+               : 1 (!10921 : 0 (/26.Q) : 1 (/@or4));
+  end;
+5  =
+  begin
+  val = \_io;
+  reset = @pt21;  "common reset term used here"
+  set = @pt187;
+  preload = @pt176 : 0 () : 1 (5);
+  clock = !10940 : 0 (!10941 : 0 (/13) : 1 (13))
+         : 1 (!10941 : 0 (/1) : 1 (1));
+  FF_type = 0;
+  storage_type = !10938 : 0 (1) : 1 (0);
+  observe = @pt8 : 0 () : 1 (5.Q);
+  enable = !10942 : 0 (!10943 : 0 (^0) : 1 (^1))
+          : 1 (!10943 : 0 (@xor_enable1) : 1 (/11));
+  mem0_input  = !10939 : 0 (5) : 1 (@or5);
+  mem_output  = 0;
+  out_element = !10936 : 0 (!10937 : 0 ( 5.Q) : 1 (@or5))
+               : 1 (!10937 : 0 (/5.Q) : 1 (/@or5));
+  end;
+6  =
+  begin
+  val = \_io;
+  reset = @pt21;  "common reset term used here"
+  set = @pt187;
+  preload = @pt176 : 0 () : 1 (6);
+  clock = !10958 : 0 (!10959 : 0 (/13) : 1 (13))
+         : 1 (!10959 : 0 (/1) : 1 (1));
+  FF_type = 0;
+  storage_type = !10956 : 0 (1) : 1 (0);
+  observe = @pt8 : 0 () : 1 (6.Q);
+  enable = !10960 : 0 (!10961 : 0 (^0) : 1 (^1))
+          : 1 (!10961 : 0 (@xor_enable1) : 1 (/11));
+  mem0_input  = !10957 : 0 (6) : 1 (@or6);
+  mem_output  = 0;
+  out_element = !10954 : 0 (!10955 : 0 ( 6.Q) : 1 ( @or6))
+               : 1 (!10955 : 0 (/6.Q) : 1 (/@or6));
+  end;
+7  =
+  begin
+  val = \_io;
+  reset = @pt21;  "common reset term used here"
+  set = @pt187;
+  preload = @pt176 : 0 () : 1 (7);
+  clock = !10976 : 0 (!10977 : 0 (/13) : 1 (13))
+         : 1 (!10977 : 0 (/1) : 1 (1));
+  FF_type = 0;
+  storage_type = !10974 : 0 (1) : 1 (0);
+  observe = @pt8 : 0 () : 1 (7.Q);
+  enable = !10978 : 0 (!10979 : 0 (^0) : 1 (^1))
+          : 1 (!10979 : 0 (@xor_enable2) : 1 (/11));
+  mem0_input  = !10975 : 0 (7) : 1 (@or7);
+  mem_output  = 0;
+  out_element = !10972 : 0 (!10973 : 0 ( 7.Q) : 1 (@ or7))
+               : 1 (!10973 : 0 (/7.Q) : 1 (/@or7));
+  end;
+8  =
+  begin
+  val = \_io;
+  reset = @pt21;  "common reset term used here"
+  set = @pt187;
+  preload = @pt176 : 0 () : 1 (8);
+  clock = !10994 : 0 (!10995 : 0 (/13) : 1 (13))
+         : 1 (!10995 : 0 (/1) : 1 (1));
+  FF_type = 0;
+  storage_type = !10992 : 0 (1) : 1 (0);
+  observe = @pt8 : 0 () : 1 (8.Q);
+  enable = !10996 : 0 (!10997 : 0 (^0) : 1 (^1))
+          : 1 (!10997 : 0 (@xor_enable2) : 1 (/11));
+  mem0_input  = !10993 : 0 (8) : 1 (@or8);
+  mem_output  = 0;
+  out_element = !10990 : 0 (!10991 : 0 ( 8.Q) : 1 (@ or8))
+               : 1 (!10991 : 0 (/8.Q) : 1 (/@or8));
+  end;
+9  =
+  begin
+  val = \_io;
+  observe = @pt8 : 0 () : 1 (27.Q);
+  enable = !11014 : 0 (!11015 : 0 (^0) : 1 (^1))
+          : 1 (!11015 : 0 (@xor_enable2) : 1 (/11));
+  mem_output  = 0;
+  out_element = !11008 : 0 (!11009 : 0 ( 27.Q) : 1 (@ or9))
+               : 1 (!11009 : 0 (/27.Q) : 1 (/@or9));
+  end;
+10 =
+  begin
+  val = \_io;
+  observe = @pt8 : 0 () : 1 (28.Q);
+  enable = !11030 : 0 (!11031 : 0 (^0) : 1 (^1))
+          : 1 (!11031 : 0 (@xor_enable2) : 1 (/11));
+  mem_output  = 0;
+  out_element = !11024 : 0 (!11025 : 0 ( 28.Q) : 1 (@ or10))
+               : 1 (!11025 : 0 (/28.Q) : 1 (/@or10));
+  end;
+11 =
+  begin
+  val = \_input;
+  end;
+12 =
+  begin
+  val = \_power;
+  end;
+13 =
+  begin
+  val = \_clk_input;
+  end;
+14 =
+  begin
+  val = \_input;
+  end;
+15 =
+  begin
+  val = \_io;
+  observe = @pt8 : 0 () : 1 (29.Q);
+  enable = !11038 : 0 (!11039 : 0 (^0) : 1 (^1))
+          : 1 (!11039 : 0 (@xor_enable3) : 1 (/11));
+  mem_output  = 0;
+  out_element = !11032 : 0 (!11033 : 0 ( 29.Q) : 1 (@ or15))
+               : 1 (!11033 : 0 (/29.Q) : 1 (/@or15));
+  end;
+16 =
+  begin
+  val = \_io;
+  observe = @pt8 : 0 () : 1 (30.Q);
+  enable = !11022 : 0 (!11023 : 0 (^0) : 1 (^1))
+          : 1 (!11023 : 0 (@xor_enable3) : 1 (/11));
+  mem_output  = 0;
+  out_element = !11016 : 0 (!11017 : 0 ( 30.Q) : 1 (@ or16))
+               : 1 (!11017 : 0 (/30.Q) : 1 (/@or16));
+  end;
+17 =
+  begin
+  val = \_io;
+  reset = @pt21;
+  set = @pt187;
+  preload = @pt176 : 0 () : 1 (17);
+  clock = !11003 : 0 (!11004 : 0 (/13) : 1 (13))
+         : 1 (!11004 : 0 (/1) : 1 (1));
+  FF_type = 0;
+  storage_type = !11001 : 0 (1) : 1 (0);
+  observe = @pt8 : 0 () : 1 (17.Q);
+  enable = !11005 : 0 (!11006 : 0 (^0) : 1 (^1))
+          : 1 (!11006 : 0 (@xor_enable3) : 1 (/11));
+  mem0_input  = !11002 : 0 (17) : 1 (@or17);
+  mem_output  = 0;
+  out_element = !10999 : 0 (!11000 : 0 ( 17.Q) : 1 (@ or17))
+               : 1 (!11000 : 0 (/17.Q) : 1 (/@or17));
+  end;
+18 =
+  begin
+  val = \_io;
+  reset = @pt21;
+  set = @pt187;
+  preload = @pt176 : 0 () : 1 (18);
+  clock = !10985 : 0 (!10986 : 0 (/13) : 1 (13))
+         : 1 (!10986 : 0 (/1) : 1 (1));
+  FF_type = 0;
+  storage_type = !10983 : 0 (1) : 1 (0);
+  observe = @pt8 : 0 () : 1 (18.Q);
+  enable = !10987 : 0 (!10988 : 0 (^0) : 1 (^1))
+          : 1 (!10988 : 0 (@xor_enable3) : 1 (/11));
+  mem0_input  = !10984 : 0 (18) : 1 (@or18);
+  mem_output  = 0;
+  out_element = !10981 : 0 (!10982 : 0 ( 18.Q) : 1 (@ or18))
+               : 1 (!10982 : 0 (/18.Q) : 1 (/@or18));
+  end;
+19 =
+  begin
+  val = \_io;
+  reset = @pt21;
+  set = @pt187;
+  preload = @pt176 : 0 () : 1 (19);
+  clock = !10967 : 0 (!10968 : 0 (/13) : 1 (13))
+         : 1 (!10968 : 0 (/1) : 1 (1));
+  FF_type = 0;
+  storage_type = !10965 : 0 (1) : 1 (0);
+  observe = @pt8 : 0 () : 1 (19.Q);
+  enable = !10969 : 0 (!10970 : 0 (^0) : 1 (^1))
+          : 1 (!10970 : 0 (@xor_enable4) : 1 (/11));
+  mem0_input  = !10966 : 0 (19) : 1 (@or19);
+  mem_output  = 0;
+  out_element = !10963 : 0 (!10964 : 0 ( 19.Q) : 1 (@ or19))
+               : 1 (!10964 : 0 (/19.Q) : 1 (/@or19));
+  end;
+20 =
+  begin
+  val = \_io;
+  reset = @pt21;
+  set = @pt187;
+  preload = @pt176 : 0 () : 1 (20);
+  clock = !10949 : 0 (!10950 : 0 (/13) : 1 (13))
+         : 1 (!10950 : 0 (/1) : 1 (1));
+  FF_type = 0;
+  storage_type = !10947 : 0 (1) : 1 (0);
+  observe = @pt8 : 0 () : 1 (20.Q);
+  enable = !10951 : 0 (!10952 : 0 (^0) : 1 (^1))
+          : 1 (!10952 : 0 (@xor_enable4) : 1 (/11));
+  mem0_input  = !10948 : 0 (20) : 1 (@or20);
+  mem_output  = 0;
+  out_element = !10945 : 0 (!10946 : 0 ( 20.Q) : 1 (@ or20))
+               : 1 (!10946 : 0 (/20.Q) : 1 (/@or20));
+  end;
+21 =
+  begin
+  val = \_io;
+  observe = @pt8 : 0 () : 1 (31.Q);
+  enable = !10934 : 0 (!10935 : 0 (^0) : 1 (^1))
+          : 1 (!10935 : 0 (@xor_enable4) : 1 (/11));
+  mem_output  = 0;
+  out_element = !10928 : 0 (!10929 : 0 ( 31.Q) : 1 (@ or21))
+               : 1 (!10929 : 0 (/31.Q) : 1 (/@or21));
+  end;
+22 =
+  begin
+  val = \_io;
+  observe = @pt8 : 0 () : 1 (32.Q);
+  enable = !10918 : 0 (!10919 : 0 (^0) : 1 (^1))
+          : 1 (!10919 : 0 (@xor_enable4) : 1 (/11));
+  mem_output  = 0;
+  out_element = !10912 : 0 (!10913 : 0 ( 32.Q) : 1 (@ or22))
+               : 1 (!10913 : 0 (/32.Q) : 1 (/@or22));
+  end;
+23 =
+  begin
+  val = \_input;
+  end;
+24 =
+  begin
+  val = \_power;
+  end;
+25 =  "25 to 32 are internal registers"
+  begin
+  val = \_output;
+  reset = @pt21;
+  set = @pt187;
+  preload = @pt176 : 0 () : 1 (3);
+  clock = !10908 : 0 (!10909 : 0 (/13) : 1 (13))
+         : 1 (!10909 : 0 (/1) : 1 (1));
+  FF_type = 0;
+  storage_type = !10906 : 0 (1) : 1 (0);
+  enable = ^1;  "always enabled"
+  mem0_input  = !10907 : 0 (3) : 1 (@or3);
+  mem_output  = 0;
+  out_element = !10904 : 0 (25.Q) : 1 (/25.Q);
+  end;
+26 =
+  begin
+  val = \_output;
+  reset = @pt21;
+  set = @pt187;
+  preload = @pt176 : 0 () : 1 (4);
+  clock = !10924 : 0 (!10925 : 0 (/13) : 1 (13))
+         : 1 (!10925 : 0 (/1) : 1 (1));
+  FF_type = 0;
+  storage_type = !10922 : 0 (1) : 1 (0);
+  enable = ^1;
+  mem0_input  = !10923 : 0 (4) : 1 (@or4);
+  mem_output  = 0;
+  out_element = !10920 : 0 (26.Q) : 1 (/26.Q);
+  end;
+27 =
+  begin
+  val = \_output;
+  reset = @pt21;
+  set = @pt187;
+  preload = @pt176 : 0 () : 1 (9);
+  clock = !11012 : 0 (!11013 : 0 (/13) : 1 (13))
+         : 1 (!11013 : 0 (/1) : 1 (1));
+  FF_type = 0;
+  storage_type = !11010 : 0 (1) : 1 (0);
+  enable = ^1;
+  mem0_input  = !11011 : 0 (9) : 1 (@or9);
+  mem_output  = 0;
+  out_element = !11008 : 0 (27.Q) : 1 (/27.Q);
+  end;
+28 =
+  begin
+  val = \_output;
+  reset = @pt21;
+  set = @pt187;
+  preload = @pt176 : 0 () : 1 (10);
+  clock = !11028 : 0 (!11029 : 0 (/13) : 1 (13))
+         : 1 (!11029 : 0 (/1) : 1 (1));
+  FF_type = 0;
+  storage_type = !11026 : 0 (1) : 1 (0);
+  enable = ^1;
+  mem0_input  = !11027 : 0 (10) : 1 (@or10);
+  mem_output  = 0;
+  out_element = !11024 : 0 (28.Q) : 1 (/28.Q);
+  end;
+29 =
+  begin
+  val = \_output;
+  reset = @pt21;
+  set = @pt187;
+  preload = @pt176 : 0 () : 1 (15);
+  clock = !11036 : 0 (!11037 : 0 (/13) : 1 (13))
+         : 1 (!11037 : 0 (/1) : 1 (1));
+  FF_type = 0;
+  storage_type = !11034 : 0 (1) : 1 (0);
+  enable = ^1;
+  mem0_input  = !11035 : 0 (15) : 1 (@or15);
+  mem_output  = 0;
+  out_element = !11032 : 0 (29.Q) : 1 (/29.Q);
+  end;
+30 =
+  begin
+  val = \_output;
+  reset = @pt21;
+  set = @pt187;
+  preload = @pt176 : 0 () : 1 (16);
+  clock = !11020 : 0 (!11021 : 0 (/13) : 1 (13))
+         : 1 (!11021 : 0 (/1) : 1 (1));
+  FF_type = 0;
+  storage_type = !11018 : 0 (1) : 1 (0);
+  enable = ^1;
+  mem0_input  = !11019 : 0 (16) : 1 (@or16);
+  mem_output  = 0;
+  out_element = !11016 : 0 (30.Q) : 1 (/30.Q);
+  end;
+31 =
+  begin
+  val = \_output;
+  reset = @pt21;
+  set = @pt187;
+  preload = @pt176 : 0 () : 1 (21);
+  clock = !10932 : 0 (!10933 : 0 (/13) : 1 (13))
+         : 1 (!10933 : 0 (/1) : 1 (1));
+  FF_type = 0;
+  storage_type = !10930 : 0 (1) : 1 (0);
+  enable = ^1;
+  mem0_input  = !10931 : 0 (21) : 1 (@or21);
+  mem_output  = 0;
+  out_element = !10928 : 0 (31.Q) : 1 (/31.Q);
+  end;
+32 =
+  begin
+  val = \_output;
+  reset = @pt21;
+  set = @pt187;
+  preload = @pt176 : 0 () : 1 (22);
+  clock = !10916 : 0 (!10917 : 0 (/13) : 1 (13))
+         : 1 (!10917 : 0 (/1) : 1 (1));
+  FF_type = 0;
+  storage_type = !10914 : 0 (1) : 1 (0);
+  enable = ^1;
+  mem0_input  = !10915 : 0 (22) : 1 (@or22);
+  mem_output  = 0;
+  out_element = !10912 : 0 (32.Q) : 1 (/32.Q);
+  end;
+end; "PIN"
+END_DEF

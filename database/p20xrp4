@@ -1,0 +1,117 @@
+"Database AmPAL20XRP4"
+24 24 40
+1  CLOCK @
+2  INPUT 0 1 2 0
+   0 0 0 0
+   # combinatorial -1
+   @
+3  INPUT 4 5 2 0
+   0 0 0 0
+   # combinatorial -1
+   @
+4  INPUT 8 9 2 0
+   0 0 0 0
+   # combinatorial -1
+   @
+5  INPUT 12 13 2 0
+   0 0 0 0
+   # combinatorial -1
+   @
+6  INPUT 16 17 2 0
+   0 0 0 0
+   # combinatorial -1
+   @
+7  INPUT 20 21 2 0
+   0 0 0 0
+   # combinatorial -1
+   @
+8  INPUT 24 25 2 0
+   0 0 0 0
+   # combinatorial -1
+   @
+9  INPUT 28 29 2 0
+   0 0 0 0
+   # combinatorial -1
+   @
+10 INPUT 32 33 2 0
+   0 0 0 0
+   # combinatorial -1
+   @
+11 INPUT 36 37 2 0
+   0 0 0 0
+   # combinatorial -1
+   @
+12 GND @
+13 CONTROL @  "dedicated enable pin"
+14 IO 38 39 3 0  "x1 x2 x3 x4 <feedback source> <output type>"
+ 8 3120  "# of product terms (PT), starting at link address 3120"
+ 1 3080 0 0  "# of tristate/enable PTs
+         # of sync preset PTs
+         # of async reset PTs"
+ # ACTIVE_LOW 3449 0 + ACTIVE_HIGH 3449 1
+ # COMBINATORIAL -1
+ @
+15 IO 34 35 3 0
+ 8 2760
+ 1 2720 0 0
+ # ACTIVE_LOW 3448 0 + ACTIVE_HIGH 3448 1
+ # COMBINATORIAL -1
+ @
+16 IO 30 31 3 0
+ 8 2400
+ 1 2360 0 0
+ # ACTIVE_LOW 3447 0 + ACTIVE_HIGH 3447 1
+ # COMBINATORIAL -1
+ @
+17 OUTPUT 26 27 3 0
+ 6 2120
+ 0 0 0
+ # ACTIVE_LOW 3446 0 + ACTIVE_HIGH 3446 1
+ # REGISTERED -1
+ ! XOR 2 2040
+ & ENABLE 13
+ @
+18 OUTPUT 22 23 3 0
+ 6 1800
+ 0 0 0
+ # ACTIVE_LOW 3445 0 + ACTIVE_HIGH 3445 1
+ # REGISTERED -1
+ ! XOR 2 1720
+ & ENABLE 13
+ @
+19 OUTPUT 18 19 3 0
+ 6 1480
+ 0 0 0
+ # ACTIVE_LOW 3444 0 + ACTIVE_HIGH 3444 1
+ # REGISTERED -1
+ ! XOR 2 1400
+ & ENABLE 13
+ @
+20 OUTPUT 14 15 3 0
+ 6 1160
+ 0 0 0
+ # ACTIVE_LOW 3443 0 + ACTIVE_HIGH 3443 1
+ # REGISTERED -1
+ ! XOR 2 1080
+ & ENABLE 13
+ @
+21 IO 10 11 3 0
+ 8 760
+ 1 720 0 0
+ # ACTIVE_LOW 3442 0 + ACTIVE_HIGH 3442 1
+ # COMBINATORIAL -1
+ @
+22 IO 6 7 3 0
+ 8 400
+ 1 360 0 0
+ # ACTIVE_LOW 3441 0 + ACTIVE_HIGH 3441 1
+ # COMBINATORIAL -1
+ @
+23 IO 2 3 3 0
+ 8 40
+ 1 0 0 0
+ # ACTIVE_LOW 3440 0 + ACTIVE_HIGH 3440 1
+ # COMBINATORIAL -1
+ @
+24 VCC @
+$

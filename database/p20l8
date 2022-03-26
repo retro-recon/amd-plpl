@@ -1,0 +1,109 @@
+"Database AmPAL20L8"
+24 24 40
+1  INPUT 2 3 2 0
+   0 0 0 0
+   # combinatorial -1
+   @
+2  INPUT 0 1 2 0
+   0 0 0 0
+   # combinatorial -1
+   @
+3  INPUT 4 5 2 0
+   0 0 0 0
+   # combinatorial -1
+   @
+4  INPUT 8 9 2 0
+   0 0 0 0
+   # combinatorial -1
+   @
+5  INPUT 12 13 2 0
+   0 0 0 0
+   # combinatorial -1
+   @
+6  INPUT 16 17 2 0
+   0 0 0 0
+   # combinatorial -1
+   @
+7  INPUT 20 21 2 0
+   0 0 0 0
+   # combinatorial -1
+   @
+8  INPUT 24 25 2 0
+   0 0 0 0
+   # combinatorial -1
+   @
+9  INPUT 28 29 2 0
+   0 0 0 0
+   # combinatorial -1
+   @
+10 INPUT 32 33 2 0
+   0 0 0 0
+   # combinatorial -1
+   @
+11 INPUT 36 37 2 0
+   0 0 0 0
+   # combinatorial -1
+   @
+12 GND @
+13 INPUT 38 39 2 0
+   0 0 0 0
+   # combinatorial -1
+   @
+14 INPUT 34 35 2 0
+   0 0 0 0
+   # combinatorial -1
+   @
+15 OUTPUT -1 2 1
+ 7 2280
+ 1 2240 0 0
+ # COMBINATORIAL -1
+ # ACTIVE_LOW -1
+ @
+16 IO 30 31 3 0
+ 7 1960
+ 1 1920 0 0
+ # COMBINATORIAL -1
+ # ACTIVE_LOW -1
+ @
+17 IO 26 27 3 0
+ 7 1640
+ 1 1600 0 0
+ # COMBINATORIAL -1
+ # ACTIVE_LOW -1
+ @
+18 IO 22 23 3 0
+ 7 1320
+ 1 1280 0 0
+ # COMBINATORIAL -1
+ # ACTIVE_LOW -1
+ @
+19 IO 18 19 3 0
+ 7 1000
+ 1 960 0 0
+ # COMBINATORIAL -1
+ # ACTIVE_LOW -1
+ @
+20 IO 14 15 3 0
+ 7 680
+ 1 640 0 0
+ # COMBINATORIAL -1
+ # ACTIVE_LOW -1
+ @
+21 IO 10 11 3 0
+ 7 360
+ 1 320 0 0
+ # COMBINATORIAL -1
+ # ACTIVE_LOW -1
+ @
+22 OUTPUT -1 2 1
+ 7 40
+ 1 0 0 0
+ # COMBINATORIAL -1
+ # ACTIVE_LOW -1
+ @
+23 INPUT 6 7 2 0
+ 0 0 0 0
+ # combinatorial -1
+ @
+24 VCC @
+$

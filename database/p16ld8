@@ -1,0 +1,108 @@
+"Database AmPAL16LD8"
+20 20 32
+1  INPUT 2 3 2 0
+   0 0 0 0
+   # combinatorial -1
+   @
+2  INPUT 0 1 2 0
+   0 0 0 0
+   # combinatorial -1
+   @
+3  INPUT 4 5 2 0
+   0 0 0 0
+   # combinatorial -1
+   @
+4  INPUT 8 9 2 0
+   0 0 0 0
+   # combinatorial -1
+   @
+5  INPUT 12 13 2 0
+   0 0 0 0
+   # combinatorial -1
+   @
+6  INPUT 16 17 2 0
+   0 0 0 0
+   # combinatorial -1
+   @
+7  INPUT 20 21 2 0
+   0 0 0 0
+   # combinatorial -1
+   @
+8  INPUT 24 25 2 0
+   0 0 0 0
+   # combinatorial -1
+   @
+9  INPUT 28 29 2 0
+   0 0 0 0
+   # combinatorial -1
+   @
+10 GND @
+11 INPUT 30 31 2 0
+   0 0 0 0
+   # combinatorial -1
+   @
+"Feedback source indicates where feedback is being taken:
+ e.g.; in a registered part, feeback can come from HIGH or LOW
+   Q output of the register.
+ Feedback Source: 0 = HIGH_FDBK
+        : 1 = LOW_FDBK
+        : 2 = NO_FDBK
+        : 3 = CORRECT_FDBK
+ If dedicated OUTPUT as w/ Pin 12, then no true and complement inputs are
+ read; specify the feedback source and output polarity type"
+
+12 OUTPUT -1 2 1
+ 8 1792  "# of product terms (PT), starting at link address 1792"
+ 0 0 0       "# of tristate/enable PTs: 0
+              # of sync preset PTs: 0
+              # of async reset PTs: 0 "
+ # COMBINATORIAL -1
+ # ACTIVE_LOW -1
+ @
+13 IO 26 27 3 0  "x1 x2 x3 x4 <feedback source> <output type>"
+ 8 1536
+ 0 0 0
+   "--> architecture fuses marked by #, name and then '-1' mean that the
+        name can be used in the pin definition section but that there is
+        fuse dedicated to it."
+ # COMBINATORIAL -1
+ # ACTIVE_LOW -1
+ @
+14 IO 22 23 3 0
+ 8 1280
+ 0 0 0
+ # COMBINATORIAL -1
+ # ACTIVE_LOW -1
+ @
+15 IO 18 19 3 0
+ 8 1024
+ 0 0 0
+ # COMBINATORIAL -1
+ # ACTIVE_LOW -1
+ @
+16 IO 14 15 3 0
+ 8 768
+ 0 0 0
+ # COMBINATORIAL -1
+ # ACTIVE_LOW -1
+ @
+17 IO 10 11 3 0
+ 8 512
+ 0 0 0
+ # COMBINATORIAL -1
+ # ACTIVE_LOW -1
+ @
+18 IO 6 7 3 0
+ 8 256
+ 0 0 0
+ # COMBINATORIAL -1
+ # ACTIVE_LOW -1
+ @
+19 OUTPUT -1 2 1
+ 8 0
+ 0 0 0
+ # COMBINATORIAL -1
+ # ACTIVE_LOW -1
+ @
+20 VCC @
+$
