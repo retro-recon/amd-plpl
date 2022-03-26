@@ -1,0 +1,1229 @@
+	Am29PL14X Assembler
+	Software Version 3.32 July 1987
+	AMD 1.00a
+
+
+
+
+	                        TABLE OF CONTENTS
+
+	                                                           Page
+
+	2.1   Introduction                                          2-1
+
+	2.1.1 Assembler Features                                    2-1
+	2.1.2 Error Detection and Diagnosis                         2-2
+	2.1.3 Computer System Requirements                          2-2
+	2.1.4 Making Backups                                        2-3
+
+	2.2   User's Guide                                          2-4
+
+	2.2.1 Notation                                              2-4
+	2.2.2 Running the Assembler                                 2-4
+	2.2.3 Program Output                                        2-5
+	          - JEDEC Standard Fuse Map File                    2-5
+	          - PROM Bit Pattern                                2-6
+
+	2.3   Language Reference                                    2-7
+
+	2.3.1 Language Elements                                     2-8
+	          i. Keywords                                       2-8
+	         ii. Identifiers and Numbers                        2-9
+
+	2.3.2 Assembler Program Structure                           2-9
+	          i. DEVICE section                                 2-9
+	         ii. SSR
+	                - using SSR Diagnostics                     2-10
+	        iii. DEFAULT
+	                - setting the default fuse                  2-10
+	         iv. DEFINE
+	                - defining constants and
+	                  logic expressions                         2-10
+	          v. DEFAULT_OUTPUT
+	                - setting a default control
+	                  output field                              2-11
+	         vi. TEST_CONDITION
+	                - specifying a default
+	                  test condition                            2-12
+	        vii. OUT_POLARITY
+	                - setting the control output
+	                  pin polarity                              2-13
+
+
+	i
+	       viii. ARCHITECTURE
+	                - setting the architecture features         2-14
+	         ix. Main assembler section
+	                - maximum control store depth               2-14
+
+	2.3.3 Statement Elements                                    2-15
+	          i. Specifying Microcode Addresses
+	                - Using the ORG statement                   2-15
+	         ii. Using LABELs                                   2-15
+	        iii. Specifying CONTROL OUTPUT Values               2-16
+	         iv. LOGIC OPERATORS                                2-16
+
+	2.3.4 Statement Formats                                     2-17
+	    - TEST Conditions and the Polarity Bit (POL)            2-17
+	    - Clearing the EQ Flag                                  2-19
+
+	2.3.5 Valid Assembler Statements for                        2-20
+	    - Am29PL131/Am29PL141                                   2-20
+	    - Am29PL142                                             2-21
+
+
+	ii
+	                               CHAPTER 2
+
+	                          Am29PL14X ASSEMBLER
+
+
+	2.1  INTRODUCTION TO THE Am29PL14X ASSEMBLER
+
+	This section discusses the Am29PL14X assembler.  It describes the
+	features,    installation   procedures,    system   requirements,
+	assembler execution statements, and assembler language elements.
+
+	2.1.1  ASSEMBLER FEATURES
+
+	The   Am29PL14X   Assembler  provides  high  level   microprogram
+	development  support  for the Am29PL14X family of  parts  (PL131,
+	PL141,  and PL142). This assembler accepts data defined as either
+	bytes or words,  and assigns values to bits in different  formats
+	(binary, octal, decimal or hexadecimal).
+
+	With the inclusion of high level language constructs such as  IF-
+	THEN-ELSE  and   WHILE,  the  microprogrammer's task  is  greatly
+	simplified  since the microcode is written in a logical and  more
+	natural flowing  syntax.   In addition,  documentation of code is
+	significantly enhanced since the microcode is expressed in a more
+	readable and easy to follow format.
+
+	Assembler features include:
+
+	   - High level language constructs
+	         * IF-THEN-ELSE
+	         * WHILE
+
+	   - binary, octal, decimal, and hexadecimal numbers are
+	     recognized
+
+	   - jump/branch to labels
+
+	   - logic equations for control outputs
+
+
+	                                                                 2-1
+	   - error detection and diagnosis
+
+	   - default test condition
+
+	   - JEDEC standard fuse map output
+
+	   - symbol table output
+
+
+	2.1.2  ERROR DETECTION AND DIAGNOSIS
+
+	Much  effort  has  been made to  provide  relevant  syntax  error
+	detection   and  diagnostic  messages  in  order  to   facilitate
+	debugging  of errors occurring  in the microcode.   Note that one
+	error  may  cause  spurious  errors   to  propagate  through  the
+	assembler  source  file because the compiler  expects  a  certain
+	sequence  of  symbols.   The  compiler does  not  understand  the
+	microcode's  intent or purpose.   Correcting the first error  and
+	other meaningful errors (ex:  variable name not defined in DEFINE
+	section)  will  remove  spurious  errors  (ex:   ','  symbol  not
+	defined).
+
+	The  assembler  will  check the input file to determine  that  no
+	conflicts  exist in the use of input pins which double as  Serial
+	Shift   Register   (SSR)  pins  which  are  used   for   customer
+	diagnostics/testing. Only the Am29PL141/142 have SSR pins.
+
+
+	2.1.3  SYSTEM REQUIREMENTS
+
+	The  following  hardware  and software are required  to  use  the
+	assembler:
+
+	Hardware (minimum configuration):
+
+	-    an IBM PC/XT or other PC-compatible with at least 256K
+	     bytes of RAM memory
+	-    two double-sided, double-density floppy disk drives
+	-    RS232 serial port and a cable to connect to a logic
+	     device programmer
+
+	Software:
+
+	-    PC-DOS Version 2.0 or higher or MS-DOS Version 2.11 or
+	     higher
+	-    A word processor to create the assembler source file.
+	     Any word processor which produces standard ASCII output
+	     files is acceptable. Example: Wordstar operating in
+	     Non-document mode.
+
+
+	2-2
+	The following files are on the Am29PL14X Assembler disk:
+
+	  FILENAME            DESCRIPTION
+
+	 ASM14X.EXE      Am29PL14X assembler
+	 PL131           Am29PL131 database file
+	 PL141           Am29PL141 database file
+	 PL142           Am29PL142 database file
+	 COFFEE.EXP      Source file for coffee machine example
+	 MAKE_CPY.BAT    Batch file for making copies and backups
+
+
+	2.1.4  MAKING BACKUPS
+
+	Before using the Am29PL14X assembler,  make a backup copy of  the
+	distribution disk using the following procedure.
+
+
+	For two drive systems:
+
+	Put  master diskette in drive A and a formatted blank diskette in
+	drive B and type "MAKE_CPY B"
+
+	All  the  files in the distribution disk will be  copied  to  the
+	diskette in drive b.
+
+
+	For Hard disk systems :
+
+	1. Turn on the computer and boot up with DOS
+	2. Put the master/distribution disk in drive A
+	3. Set the system prompt to drive A by typing
+
+	              C>A: <CR>
+
+	4. Type "MAKE_CPY C" and press return.
+
+	Check  that a directory "FPC" does not exist.   "MAKE_CPY C" will
+	create  a   directory  called  "FPC" and all  the  files  on  the
+	distribution  disk  will be copied on to the hard  disk  in  this
+	directory.   This  batch file may be modified if the files are to
+	be copied to a directory other than "FPC".
+
+	Store  the  distribution disk in a safe  place.   The  copy  just
+	created is the working copy.
+
+	The recommended procedure is to make a backup of the program disk
+	and  use  the  backup copy as the working  copy.   In  the  event
+	something happens to the working copy,  a new working copy can be
+
+
+	                                                                 2-3
+	created by repeating the above procedure.
+
+
+
+	2.2  USER'S GUIDE
+
+	2.2.1  NOTATION
+
+	The  following  symbols  are used to describe  the  command  line
+	arguments:
+
+	     < >       angle brackets enclose identifiers;
+	               i.e., filenames
+
+	     [ ]       square brackets enclose optional items
+
+
+	2.2.2  RUNNING THE ASSEMBLER
+
+	The assembler takes an input source file written in the Am29PL14X
+	syntax   (described in Section 2.3) and produces a JEDEC fuse map
+	file.  This  file is sent to a device programmer to  program  the
+	target device.
+
+	Four files are required to run the assembler:
+
+	The   executable   file   ASM14X.EXE  and  the   database   files
+	PL131/141/142.
+
+	After  a  source  file  is created,  it is  assembled  using  the
+	following command:
+
+
+	A> ASM14X -I <assembler file> [-O <fuse map file>][ -B <PROM bit
+	     file>][-E <error message file>][-T <symbol table file>]
+	     [-S][-D]
+
+	where:
+
+	     -I <filename>       specifies an input file
+
+	     -O <filename>       specifies a destination file for the
+	                         fuse map generated by the assembler
+
+	     -E <filename>       specifies a file to hold any
+	                         assembler error messages
+
+
+	2-4
+	     -B <filename>       displays and stores the PROM bit pattern
+	                         into a file
+
+	     -T <filename>       displays a symbol table file
+
+	     -S                  removes the SSR fuse from the JEDEC fuse
+	                         map (See SSR in Section 2.3.2)
+
+	     -D                  display dots on the screen as the
+	                         source file is being processed; used
+	                         to show that the program is running
+
+
+	Options O,  E,  B,  T, S, and D are optional.  The error messages
+	and fuse map will always be displayed on the screen.  The options
+	do not have to be capitalized.
+
+	Examples :
+
+	A> ASM14X -I MYINPUT
+	    - ASM14X will process the input file named MYINPUT
+
+	A> ASM14X -I MYINPUT -O MAPOUT
+	    - ASM14X will process the input file MYINPUT and output
+	      the fusemap to the file named MAPOUT
+
+	A> ASM14X -I MYINPUT -B PROMBIT
+	    - ASM14X  will process the input file named MYINPUT and
+	      store the PROM bit pattern into the output file named
+	      PROMBIT
+
+	A> ASM14X -i COFFEE.EXP -o COFFEE.JED  -b COFFEE.BIT
+	    - ASM14X will process the assembler file named COFFEE.EXP
+	      and output a JEDEC fuse map file named COFFEE.JED and
+	      output a PROM bit pattern file named COFFEE.BIT.
+
+
+
+
+	2.2.3  ASSEMBLER OUTPUT
+
+	JEDEC Standard Fuse Map
+
+	ASM14X  produces a fuse map file which follows the standards  set
+	forth by the Joint Electronic Device Engineering Council  (JEDEC)
+	for  programmable  devices.   The fuse map file can be sent to  a
+	programmer  via  a  communications  program.    Programmers  from
+	different manufacturers may have varying setup and  communication
+	parameters  and procedures.    Consult the programmer manual  for
+
+
+	                                                                 2-5
+	more details.  Information regarding the fields in the JEDEC fuse
+	map file is detailed in Appendix A.
+
+	PROM Bit Pattern
+
+	When the 'B' option is specified, ASM14X displays the bit pattern
+	for every user-specified word in the PROM.
+
+	Each  word in the PROM is preceded by its hexadecimal and decimal
+	PROM address.   Words are displayed from the lowest location  (0)
+	to the highest (63 for the Am29PL131/141, 127 for the Am29PL142).
+
+	The  fields  (e.g.   DATA,  OPCODE,  TEST CONDITION) in  the  bit
+	pattern are marked.   This lets the microprogrammer quickly check
+	the contents of a field in a particular word.
+
+	Example: The  assembler generated a PROM bit pattern file
+	         and a JEDEC file from a PL142 design.  Note that
+	         the  JEDEC  file is the complement  of  the  bit
+	         pattern  because the control store in new  PL14X
+	         devices  are initially all '1's.  The JEDEC  map
+	         specifies bits which should be left intact (as a
+	         '1' or unprogrammed) as '0's.
+
+	PROM Contents:
+	hex <dec>     OE  OPCODE POL  TEST   DATA         OUTPUT
+	022 < 34>   [ 1 | 11001 | 0 | 0100 | 0001001 | 1111111100010000 ]
+	023 < 35>   [ 1 | 11001 | 0 | 1001 | 0001001 | 0010001100001011 ]
+	024 < 36>   [ 1 | 11001 | 0 | 0100 | 0001001 | 1111111100010000 ]
+	025 < 37>   [ 1 | 11001 | 0 | 0100 | 0001001 | 1111111100010000 ]
+	026 < 38>   [ 1 | 11001 | 0 | 0100 | 0001001 | 1111111100010000 ]
+	027 < 39>   [ 1 | 11001 | 0 | 0100 | 0001001 | 1111111100010000 ]
+	07E <126>   [ 1 | 11001 | 0 | 0100 | 0000001 | 1111111100000011 ]
+	07F <127>   [ 1 | 11101 | 1 | 0011 | 0001011 | 1111111100000001 ]
+
+	[sample] JEDEC map for device [pl142]*
+	F0*
+	L1156  0 00110 1 1011 1110110 0000000011101111 *
+	L1190  0 00110 1 0110 1110110 1101110011110100 *
+	L1224  0 00110 1 1011 1110110 0000000011101111 *
+	L1258  0 00110 1 1011 1110110 0000000011101111 *
+	L1292  0 00110 1 1011 1110110 0000000011101111 *
+	L1326  0 00110 1 1011 1110110 0000000011101111 *
+	L4284  0 00110 1 1011 1111110 0000000011111100 *
+	L4318  0 00010 0 1100 1110100 0000000011111110 *
+	L4352  0 *
+	L4353  1 *
+	C1098*      <--- Link checksum
+	58E3        <--- ASCII checksum
+
+
+
+	2-6
+	Note: The microcode word starting at location 34 decimal
+	      is programmed with the line starting at L1156 in the
+	      JEDEC fuse map. 1156 = 34 * 34 (address 34 multiplied
+	      by 34 bits per microcode word in the Am29PL142).
+
+
+
+
+
+
+
+
+
+
+
+	2.3  LANGUAGE REFERENCE
+
+	The  Am29PL14X  Assembler language is used to program  the  Fuse-
+	Programmable  Controller  family  Am29PL14X.  Logic  designs  and
+	state-machines  are  described in this  high-level  language  and
+	translated  into a format that can be loaded into a  programmable
+	logic device programmer.  The device programmer then programs the
+	Am29PL14X with this information.
+
+	This   section  describes  the  elements  and  structure  of  the
+	assembler language.  It is arranged as follows:
+
+	2.3.1  Language Elements
+	              Describes the elements used in the language.
+	2.3.2  Assembler Program Structure
+	              Explains how the language elements are put
+	              together to describe a logic design.
+
+	2.3.3  Statement Elements
+	              Describes the general statement structure:
+	              LABEL: OUTPUT, STATEMENT
+
+	2.3.4  Statement Format
+	              Describes the general assembler statement
+	              format.
+
+	2.3.5  Statements Available for the Am29PL131/141/142
+	              Lists the statement forms which correspond to
+	              device opcodes for the Am29PL131/141/142.
+
+	2.3.6  Quick Reference Guide
+	              Shows the flowcharts for the different statements
+	              and opcodes.
+
+
+	                                                                 2-7
+	2.3.1  LANGUAGE ELEMENTS
+
+	The  language consists of keywords and  user-defined  identifiers
+	which  are  put  together to form statements describing  a  logic
+	design/state   machine.    These  statements  are  converted   to
+	Am29PL14X opcodes used to implement the state machine.
+
+	A   source  file  must  conform  to  the  following   rules   and
+	restrictions:
+
+	   1. Comments are allowed in the assembler file for readability.
+	      Comments are enclosed between double quotes and can span
+	      more than one line.  Comments cannot be nested.
+
+	   2. Keywords and identifiers are separated by at least one
+	      space.
+
+	   3. Keywords and identifiers can be in upper or lower case.
+	      No distinctions are made between the two alphabetic cases.
+
+	   4. A line in the source file must not be more than 80
+	      characters long.  This is the normal width of a
+	      computer monitor.
+
+	Keywords
+
+	The following words are assembler keywords and cannot be used  as
+	variables:
+
+	   ARCHITECTURE      DEVICE      OUT_POLARITY      T3
+	   BEGIN             END         PASS_DFLT         T4
+	   CALL              EQ          PL                T5
+	   CC                GOTO        PUSH              T6
+	   CMP               LOAD        RET               TEST_CONDITION
+	   CONTINUE          LOOP        SREG              TM
+	   CREG              NEST        SSR               TO
+	   DEC               NESTED      STACK             WAIT
+	   DEFAULT           OD          T0
+	   DEFAULT_OUTPUT    OE          T1
+	   DEFINE            ORG         T2
+
+	Note: T0  to  T5,  CC and EQ are test conditions  for  the
+	      PL131/141/142.   The  PL142  also  has  T6  and  the
+	      unconditional  pass signal PASS_DFLT.  The CREG =  0
+	      flag  can  also  be  used as a  test  condition  for
+	      certain  opcodes  in all  three  devices.  Refer  to
+	      Section 2.3.5 for a list of available statements for
+	      the device family.
+
+
+	2-8
+	Identifiers
+
+	Identifiers  are  user-defined names identifying  control  output
+	patterns, test pins, and labels.
+
+	The  following  rules  apply  to names and numbers  used  in  the
+	language:
+
+	    o variables, labels and constant names are limited to 29
+	      characters in length. The first character should be an
+	      alphabetic character ('A' to 'Z' or 'a' to 'z') or the
+	      underscore symbol '_'; the remainder can be alphanumeric
+	      characters and the underscore sign '_' .
+
+	    o numbers should be terminated  with a '#n' where n is
+	      either B (binary), O (octal), D (decimal), or H
+	      (hexadecimal).  If '#n' is left out, then the number
+	      is assumed to be decimal.
+
+	     Example: Valid identifiers and numbers
+	               _A_NAME
+	               Variable_name_1
+	               VARIABLE_NAME_1   ---> treated the same way as
+	                                      "Variable_name_1"
+	               45#H              ---> 8 bit hexadecimal number
+	               45                ---> decimal 45
+
+
+	2.3.2  ASSEMBLER PROGRAM STRUCTURE
+
+	An  assembler  program source file describing a logic  design  or
+	state  machine may contain up to nine sections which must  appear
+	in the following order:
+
+	 (1) DEVICE
+	 (2) SSR*
+	 (3) DEFAULT*
+	 (4) DEFINE*
+	 (5) DEFAULT_OUTPUT*
+	 (6) TEST_CONDITION*
+	 (7) OUT_POLARITY*
+	 (8) ARCHITECTURE*
+	 (9) main body
+
+	* optional
+
+	DEVICE Section
+
+	This section must be specified for each file.  It consists of the
+
+
+	                                                                 2-9
+	keyword DEVICE (need not be in uppercase) followed by the part to
+	be used in parenthesis.
+
+	Example: DEVICE (?????) "where ????? is PL131, PL141, or PL142"
+
+	SSR Section
+
+	This  is  an optional section which instructs  the  assembler  to
+	check for test conditions made unavailable during SSR diagnostics
+	mode. The messages generated by the assembler will indicate which
+	test  condition pins have to be left solely for SSR  diagnostics.
+	This  option  will set the SSR fuse in the JEDEC fuse map to  the
+	value specified.  Set SSR to 0 or 1 only.   Default is SSR = 0 or
+	no diagnostics.
+
+	    Example: SSR = 1 ;  " a semicolon is necessary"
+
+	Note:  Some  device programmers may require the designer to  blow
+	the SSR fuse externally; i.e, the SSR fuse cannot be specified in
+	the  fuse map.   In this case,  use the "-S" option to remove the
+	SSR fuse from the JEDEC fuse map and follow the device programmer
+	procedures to set the SSR fuse.
+
+	The  control output pins P[7] and P[6] on the PL141 are also used
+	for SSR diagnostics. Because these are output pins to the user in
+	normal mode, they are not flagged as errors if the user assigns a
+	control output value using these two pins.  If the SSR option  is
+	chosen,  P[7]  and P[6] will have undefined values.  Consult  the
+	PL141/142 datasheets for detailed SSR diagnostics operation.
+
+
+	DEFAULT Section
+
+	If  DEFAULT  = 0 is specified,  unspecified fuses will be  blown,
+	thereby  setting unspecified microcode words to a logic level  0.
+	If no DEFAULT statement is used or if a DEFAULT = 1 is specified,
+	unspecified fuses will remain unblown,  thus leaving  unspecified
+	microcode words and fields at a logic level 1.
+
+	This  section  is  usually unused so that unspecified  or  unused
+	microcode  space  can  be left unprogrammed to  add  future  code
+	segments.
+
+
+	DEFINE Section
+
+	This  section is used to define constants and logic  expressions.
+	Any  user-defined name specified in this section can be  assigned
+	to a  test condition, a number/constant, or a logic expression by
+	using the '=' sign.  The logic expression consists of numbers  or
+
+
+	2-10
+	previously  defined variables and the logic operators AND (*) and
+	OR  (+).  Parentheses may also be used in the logic  expressions.
+	The  last  definition  in the DEFINE section should  end  with  a
+	semicolon.   This optional section is not needed if user  defined
+	names are not created.
+
+	Note: Each definition can be separated by an optional ','.
+
+	    Example : DEFINE first = 1      " assign first the
+	                                      decimal value 1 "
+	                     second = 2,    " the ',' is optional"
+	                     third = 3
+	                     test = t0,     " assign TEST to be "
+	                                    " test input condition T0"
+	                     output1 = 45#H
+	                     output2 = F00#H,
+	              "----- logic expression definition -----"
+
+	                     or_of_2_outputs = output1 + output2
+	                     last_one = 0101001111#b ;
+
+	Once defined,  a variable or expression can be referred to in the
+	MAIN body of the file.  For example, the test input T0 can now be
+	referred  to  as  TEST  in  the  test  condition  section,  while
+	constants  such  as  OUTPUT1,  OUTPUT2 can be  specified  in  the
+	control output sections.
+
+
+
+	DEFAULT_OUTPUT Section
+
+	This  section is used to specify a default control output.   This
+	default  output value is used if no control output expression  is
+	specified in an assembler statement.
+	    Example : DEFAULT_OUTPUT = FF0F#h ;
+
+	    Begin
+	"line1"        , if ( test = 0 ) then goto pl (stateN) ;
+	"line2"   FF#h , if ( cond = 1 ) then load pl(value) ;
+	       ....
+	       ....
+	    end.
+
+	In  the above example,  the statement at line 1 uses the  default
+	control output FF0F#H because no ouput value was specified before
+	the  ','  symbol.   Statement 2 will use '00FF#h' as its  control
+	output.
+
+	Note that 8 bit value FF#h is padded with 0s on the left side  to
+	completely  fill  the full control output width of  the  selected
+
+
+	                                                                 2-11
+	device.  If  a PL141 or PL142 is used,  then FF#h would be padded
+	with  8 0s on the left side to assign a value to all  16  control
+	output bits.   If a PL131 is used, then FF#h would be padded with
+	4  0s on the left side to assign a value to all 12 control output
+	bits.
+
+	The  right most bit is assigned to the least  significant  output
+	bit  position P[0].  The left most bit in the padded value is the
+	most significant bit,  which will be P[11] or P[15] depending  on
+	the device selected.
+
+
+	TEST_CONDITION Section
+
+	A  default test condition can be specified if one test  condition
+	is  used most of the time. This improves code  readability  since
+	the  designer  does not have to enter 'IF <cond> THEN'  in  every
+	statement.  If  a  default  test  condition  is  specified,   the
+	aforementioned  string  is automatically  concatenated  with  the
+	command/action  (ex. GOTO, CALL, LOAD) section of  the  assembler
+	statement.
+
+	The  test condition works only with assembler statements  of  the
+	form:  'IF (cond) THEN <action>' where "cond" is one of the  test
+	conditions  available  in  the  device: T0-T5,  CC,  EQ  for  the
+	PL131/141/142;  and T6, PASS_DFLT, CREG=0, and CREG <> 0 for  the
+	PL142.
+
+	 Example:  TEST_CONDITION = not t0 ; " specify  the default test
+	                                       condition as not T0"
+
+	 Begin
+	      ....
+	 output_pattern1 , ret ;
+	      ....
+	 output_pattern2, if (TEST_IN = 1) then goto pl(a_defined_label);
+	      ....
+	      ....
+	 End .
+
+	In  the  statement prefaced by  OUTPUT_PATTERN1,  this  statement
+	becomes OUTPUT_PATTERN1, IF (not t0) THEN RET; after default test
+	condition  replacement.   This  means  a  return  (RET)  will  be
+	performed if a 0 (low input level) is detected at test input T0.
+
+	The  default  test condition can also be overridden in  the  same
+	file  by  typing  out the IF-THEN string with  a  different  test
+	condition (see line preceded by output_pattern2).   The condition
+	tested in this statement is TEST_IN.
+
+
+	2-12
+	The default test condition can use the symbols NOT, "<>", and "="
+	to describe the condition.
+
+	  Example 1: TEST_CONDITION = (t4 <> 1);
+	  Example 2: TEST_CONDITION = not t2 = 0;
+
+	The  use  of parentheses is optional,  but use only one level  of
+	parenthesization (see Example 1).
+
+
+	OUT_POLARITY Section
+
+	The  polarity  of the output pins is specified as active HIGH  or
+	LOW  in this section.  A binary value is assigned to the  keyword
+	OUT_POLARITY.  Each  bit in this binary value corresponds  to  an
+	output pin on the selected device.
+
+	          OUT_POLARITY = 0000111100001111#b;
+	                         |              |
+	  Represents output pin MSB            LSB = P[0]
+
+	     MSB for Am29PL141/142 = P[15]
+	             Am29PL131     = P[11]
+
+	A  '0' sets an output to be active low and a '1' sets the  output
+	to  be  active  high.  You  can use a more  descriptive  name  by
+	defining the pattern in the DEFINE section. For example:
+
+	          DEFINE LLLLHHHHLLLLHHHH = 0000111100001111#b;
+	          OUT_POLARITY = LLLLHHHHLLLLHHHH;
+
+	By   defining   the  output  polarities  with  the   OUT_POLARITY
+	statement,  the  designer now defines  outputs in  the  BEGIN-END
+	section as being active or inactive without regard to polarity.
+
+	   Example: DEVICE (PL141)
+	            DEFINE
+	               LLLLHHHHLLLLHHHH = 0000111100001111#b;
+	            OUT_POLARITY = LLLLHHHHLLLLHHHH;
+	            BEGIN
+	      (*)   1111111100000000#b, if (t0) then
+	                                   goto pl(next_line);
+	            END.
+
+	The  control output value 1111111100000000#b means P[15] to  P[8]
+	are active,  P[7] to P[0] inactive.  The OUT_POLARITY  definition
+	sets output pins P[15] to P[12], and  P[7] to P[4] as active LOW;
+	P[11]  to P[8] and P[3] to P[0]  are active HIGH.  At the  output
+	pins,  a  LOW true signal will be observed at P[15] to P[12] when
+	this statement is executed.  Similarly,  a HIGH false signal will
+
+
+	                                                                 2-13
+	be  generated  for  P[7] to P[4].  The output in  line  (*)  will
+	actually be:  0000111111110000#b.
+
+	The outputs default to active HIGH if the OUT_POLARITY section is
+	omitted.   Ex:  OUT_POLARITY  will  default  to  FFFF#h  for  the
+	PL141/142,  and FFF#h for the PL131 (since it has only 12  output
+	pins).
+
+
+	ARCHITECTURE Section
+
+	The  designer  sets  the architecture features for  the  selected
+	device in this section. The format is:
+
+	      ARCHITECTURE
+	          FEATURE_NAME1 = BINARY_VALUE1
+	          FEATURE_NAME2 = BINARY_VALUE2
+	          FEATURE_NAME3 = BINARY_VALUE3;
+
+	FEATURE_NAME  is  a user-definable  architecture feature  in  the
+	selected device. The state of this architecture feature is set by
+	BINARY_VALUEx.  BINARY_VALUEx  is a binary value (0/1) or a  name
+	representing a binary number.
+
+	The  Am29PL141  has  one  architecture  feature  (SSR),  and  the
+	Am29PL142 has two architecture features (SSR and  EXPAND).  There
+	are no user-definable architecture features in the Am29PL131.
+
+	   Example: ARCHITECTURE   " for the Am29PL142 -------- "
+	               SSR    = 1  "    Program SSR Diagnostics "
+	               EXPAND = 1; "    Use the expand feature  "
+
+	If  architecture fuses exist on the device but are not  specified
+	by  the designer,  the program will  generate a default state for
+	the fuses (usually unprogrammed or 0).  Note that the SSR feature
+	can also be defined in the SSR Section (See 2.3.2).
+
+
+	MAIN BODY
+
+	The main body must be enclosed by a single BEGIN-END block.   Any
+	number  of statements as described in Section 2.3.5 can be inside
+	this  BEGIN-END block as long as the number does not  exceed  the
+	total PROM  word size of the part being used.  The maximum number
+	of statements or control store depth  on the Am29PL131/141 is 64,
+	and 128 on the Am29PL142.
+
+	  Example : Begin
+	            label1 : output1 , if (t0 = 0) then load pl(35) ;
+	                     output2 , while (creg <> 0)
+
+
+	2-14
+	                                 loop to pl(label1) ;
+
+	            End .  " terminate the block with a '.' "
+
+
+
+	2.3.3  STATEMENT ELEMENTS
+
+	A statement consists of the following elements:
+	     o an optional label
+	     o an output value
+	     o a statement form
+
+	Example:
+
+	       LABEL1: output , IF (cond = 0) THEN GOTO PL(data) ;
+
+	Both  the  colon  separating  the  label from  the  rest  of  the
+	statement  and the comma separating the output section  from  the
+	statement  are  necessary to distinguish the elements  from  each
+	other.
+
+	All statements are terminated by the ';' symbol.
+
+
+	SPECIFYING ADDRESSES
+
+	The   assembler  starts  assembling  microcode  at  location   0.
+	Successive  statements  go into successive  microcode  locations.
+	The  pseudo  operation .ORG followed by an address value  can  be
+	used  to force assembly to a specified address.  See the examples
+	in the following section on LABELS.
+
+	LABELS
+
+	Labels are names followed by a colon.  In the MAIN section of the
+	assembler file,  labels are optionally assigned to  any statement
+	line.   References to it in future statements are resolved to the
+	location assigned to that label by the assembler.
+
+	Example:
+	                    .ORG   20#D
+	          LABEL1 :       5,if ( cond = true ) .....
+	                         6,if ( cond = true ) then ....
+	                         7,if ( creg <> 0 ) then goto PL(label1);
+	"microcode addr 23"      8,if ( cc = 0 ) then goto PL(label2) ;
+	                         9,continue ;
+	                         0,continue ;
+	          LABEL2 :       45 , ...............
+
+
+	                                                                 2-15
+	In  the  above example,  'LABEL1' in PL(label1) will  resolve  to
+	location 20 decimal because of the ORG operation.  'LABEL2' is at
+	address  26 decimal which is referenced by PL(label2) at  address
+	23.
+
+	Labels may also appear on a line by themselves, in which case the
+	address  assigned  is the address of the previous statement  plus
+	one.
+
+	Example:
+	                    .ORG 10#D
+	          LABEL1:        0, CONTINUE;   "LABEL1 = 10"
+	          LABEL2:                       "LABEL2 = 11"
+	          LABEL3:        1, CONTINUE;   "LABEL3 = 11"
+	          LABEL4:   .ORG 20#H           "LABEL4 = 12"
+	          LABEL5:        2, CONTINUE;   "LABEL5 = 20 hex or 32"
+
+	Note  that  there  is no statement  between  LABEL1  and  LABEL3,
+	therefore LABEL2 and LABEL3 have the same values.
+
+
+	CONTROL OUTPUT
+
+	The  control  output  is a  predefined  name,  number,  or  logic
+	equation situated before a statement. It describes the outputs to
+	be  generated when this statement is executed.   The value of the
+	name,  number,  or  logic equation should not exceed  the  output
+	field width for the device.   For the PL141/142, this width is 16
+	bits; 12 bits for the PL131.
+
+	The  8  MSB  output bits on the Am29PL141/142 and 8  LSB  on  the
+	Am29PL131 can be disabled by prefacing the name, number, or logic
+	equation  in the output section by the keyword  OD.   OE  (output
+	enable)  can also be specified.   The Assembler defaults to OE if
+	neither OE or OD are used.
+
+	Examples: (using the PL141)
+
+	   LABEL1:   OD  1234#H,    CONTINUE; "Only the lower 8 bits
+	                                       (34#H) are enabled"
+	             OE  1234#H,    CONTINUE; "All 16 outputs in
+	                                       1234#H are enabled"
+	                 1234#H,    CONTINUE; "All enabled since
+	                                       default is OE"
+
+	LOGIC OPERATORS
+
+	The logic equations use AND (*) and  OR (+) operators to mask  or
+	add bits to a number or a name (defined in DEFINE).
+
+
+	2-16
+	The AND operator is of higher precedence than the OR,  i.e., will
+	be evaluated first.  This can be overridden by explicitly nesting
+	the  section(s) which must be evaluated first.   This nesting  is
+	done by using the parenthetical operators '(' and ')'.
+	    Example: Begin
+	"line 1"            A0A0#h + 00FF#h * C000#h , if ( test ) ....
+	"line 2"            (A0A0#h+00FF#h) * C000#h , if ( test ) ....
+	                      ......
+	             end.
+
+	The  control  output  for the statement in line  1  evaluates  to
+	A0A0#h  and 8000#h in line 2.   The parenthetical operators  were
+	used  to force the evaluation of the '+' first before  performing
+	the '*' in line 2.
+
+
+	2.3.4  STATEMENT FORMATS
+
+
+	The assembler recognizes four statement formats:
+
+	1. IF (<cond>) THEN <action> [ELSE <action>]
+
+	2. WHILE (CREG <> 0) <action> [ELSE <action>]
+
+	3. CONTINUE
+
+	4. CMP TM(<data>) TO PL(<data>)
+
+	The  <cond> refers to the test condition that is evaluated before
+	performing the <action> specified in the statement.  The <action>
+	can be opcodes such as GOTO,  LOAD, and CALL. Note that the WHILE
+	statement  format can only test for CREG <> 0.  Refer to  section
+	2.3.5 for the available assembler statements for each device.
+
+
+	Test Conditions And Input Polarities
+
+	The  test  condition <cond> must be enclosed by a single pair  of
+	parentheses.  The conditions available will vary with the  device
+	used. The PL131/141/142 each have the following conditions: T0 to
+	T5,  CC, and  EQ. The PL142 has 1 additional test condition input
+	T6.
+
+	These  conditions  can be compared/tested against binary  numbers
+	using NOT,  '='and '<>'.  The test input polarity bit POL,  which
+	forms  part  of  every  microcode  word,  is   generated  by  the
+	assembler   depending  on the type of test  condition  specified.
+	Table 2-1 shows the POL value for various types of tests.
+
+
+	                                                                 2-17
+	The   POL   bit  is  one  input  into  an  EXOR   gate   on   the
+	PL131/PL141/PL142  which controls active high or active low input
+	testing;  the selected test input is the other input to the EXOR.
+	For active high input testing:  If POL is 0 and the test input is
+	at a high level (1),  then the test condition is true (output  of
+	the EXOR gate). Conversely, for active low input testing, the POL
+	bit is set to a 1.  If the test input is at a low level, then the
+	test  condition is true.  Consult the PL131/141/142 datasheet for
+	details.
+	              ____________________________________
+	              |___TEST_condition__|__POL_value___|
+	              |      cc           |      0       |
+	              |  not cc           |      1       |
+	              |      cc =  0      |      1       |
+	              |      cc =  1      |      0       |
+	              |  not cc =  0      |      0       |
+	              |  not cc =  1      |      1       |
+	              |      cc <> 0      |      0       |
+	              |      cc <> 1      |      1       |
+	              |  not cc <> 0      |      1       |
+	              |__not_cc_<>_1______|______0_______|
+
+	           Table 2-1.  POL Values for Various Types of Tests
+	                       Condition being tested is 'cc'
+
+	The test inputs T0 to T5, CC and EQ (and T6 for the PL142) can be
+	compared  to  0  or  1 in the  test  condition  section  of  each
+	statement.
+
+	     Example: OUT1, IF (CC = 0) THEN  "test if CC is 0"
+	                         GOTO PL(LABEL2);
+
+	If  no  binary  value  is specified in the test condition:
+
+	     EXAMPLE: OUT2, IF  (CC)  THEN
+	                         GOTO PL(LABEL3);
+
+	then  the assembler will default to a test for the binary value 1
+	(i.e.; an active high input test):
+
+	              OUT2, IF (CC = 1) THEN  "test if CC is 1"
+	                         GOTO PL(LABEL3);
+
+	The PL142 has two special test conditions:  the "counter =  zero"
+	flag  and the "default pass" PASS_DFLT. The "counter = zero" flag
+	can  only be  tested as:  CREG = 0 and CREG <> 0. The  PASS_DFLT
+	condition  is an unconditional pass signal.  These two conditions
+	can be used as the test condition in the statement forms:
+
+	     IF <cond> THEN ....
+
+
+	2-18
+	PASS_DFLT  is  preferably  used as the default test condition  in
+	the  PL142.  Any  action (eg.  a LOAD instruction) that  must  be
+	unconditionally executed can be written as:
+
+	     DEVICE (PL142)
+	     DEFINE
+	          off_state = 0;
+	          strobe1 = 1000#h;
+	     TEST_CONDITION = PASS_DFLT; "statements which do not use"
+	                      "a test condition refer to this cond   "
+	     BEGIN
+	     start: off_state, if (T0 = 0) then  "check condition T0"
+	                             goto pl(start);
+	" -----> "  strobe1  , load pl(45);  "unconditionally load
+	                                      the counter with 45"
+	           "continue with the controller description"
+	          ...........
+	     END.
+
+	Note  that the CREG ZERO test and PASS_DFLT are internal  to  the
+	Am29PL142  and do not use any external input pins.  The user  can
+	also specify an unconditional FAIL by specifying "NOT PASS_DFLT".
+
+
+
+	CLEARING THE EQ FLAG
+
+	The  EQ  flag bit is set in the PL131/PL141/PL142 using  the  CMP
+	instruction. This bit is cleared under the following conditions:
+
+	  (1) The EQ condition is selected; and
+	  (2) a branch instruction is specified (see Section 2.3.5); and
+	  (3) the branch is successful
+
+	This EQ clear/save feature in the PL14X family lets the  designer
+	create  routines  to do comparisons which set the  EQ  flag.  The
+	equal status can then be saved or cleared upon returning from the
+	routines.
+
+	To clear the EQ flag,  specify the EQ test condition in a  branch
+	instruction.  For  example,  to  clear the EQ flag with the  GOTO
+	instruction, write:
+
+	  CTRL_OUTPUT, IF (EQ) THEN     " if the branch is successful, "
+	                  GOTO PL(ADDR);" the EQ flag is cleared       "
+
+	Consult  Tables 2-2a and 2-2b for branch statements which can  be
+	used to clear the EQ flag.
+
+
+	                                                                 2-19
+	For  BRANCH  instructions  which do not use the  EQ  flag  (e.g.,
+	LOOP),  add  the  string "AND CLEAR_EQ" to the  "condition  true"
+	section  of the instruction.  For example:  To clear the EQ  flag
+	with the LOOP nested instruction (PL131/141), type:
+
+	  CTRL_OUTPUT, WHILE (CREG <> 0)
+	                  LOOP TO PL(ADDR) AND CLEAR_EQ "cond true"
+	               ELSE NEST;
+
+	The  EQ  flag is cleared when the count register CREG is  not  0.
+	Consult  Tables  2-2a and 2-2b for statements which can  use  the
+	"AND CLEAR_EQ" string.
+
+
+	Note that for the Am29PL142, the CONTINUE instruction can be used
+	to clear the EQ flag:
+
+	    CTRL_OUTPUT, CONTINUE AND CLEAR_EQ;  "for the PL142"
+
+
+
+	2.3.5  STATEMENTS AVAILABLE FOR THE Am29PL14X
+
+	The  Am29PL14X  instruction sets are given  in  Table  2-2.   The
+	statements  in Table 2-2 are translated by the assembler into the
+	corresponding microcode fields.  The assembler displays an  error
+	message if an invalid or unknown statement is detected.
+
+
+	     Table 2-2a.  Am29PL131/141 Microprogram Instruction Set
+
+	       opcode  mnemonics        Assembler statement
+
+	 (1)*    19     GOTOPL     IF (cond) THEN GOTO PL(data)
+	 (2)*    0F     GOTOTM     IF (cond) THEN GOTO TM(data)
+
+	 (3)     0B     GOTOPLZ    IF (CREG = 0) THEN GOTO PL(data)
+	    or   0B     GOTOPLZ    IF (CREG = 0) THEN
+	                               GOTO PL(data) AND CLEAR_EQ
+	 (4)*    18     FORK       IF (cond) THEN GOTO PL(data)
+	                                 ELSE GOTO (SREG)
+
+	 (5)*    1C     CALPL      IF (cond) THEN CALL PL(data)
+	 (6)*    1D     CALPLN     IF (cond) THEN CALL PL(data),NESTED
+	 (7)*    1E     CALTM      IF (cond) THEN CALL TM(data)
+	 (8)*    1F     CALTMN     IF (cond) THEN CALL TM(data),NESTED
+
+	 (9)     04     LDPL       IF (cond) THEN LOAD PL(data)
+	(10)     05     LDPLN      IF (cond) THEN LOAD PL(data),NESTED
+	(11)     06     LDTM       IF (cond) THEN LOAD TM(data)
+
+
+	2-20
+	(12)     07     LDTMN      IF (cond) THEN LOAD TM(data),NESTED
+
+	(13)     15     PSH        IF (cond) THEN PUSH
+	(14)     17     PSHN       IF (cond) THEN PUSH,NESTED
+	(15)     14     PSHPL      IF (cond) THEN PUSH,LOAD PL(data)
+	(16)     16     PSHTM      IF (cond) THEN PUSH,LOAD TM(data)
+
+	(17)     02     RET        IF (cond) THEN RET
+	(18)     03     RETN       IF (cond) THEN RET,NESTED
+	(19)     00     RETPL      IF (cond) THEN RET,LOAD PL(data)
+	(20)     01     RETPLN     IF (cond) THEN
+	                               RET NESTED,LOAD PL(data)
+
+	(21)     09     DEC        IF (cond) THEN DEC
+	(22)     0C     DECPL      WHILE (CREG <> 0) WAIT
+	                               ELSE LOAD PL(data)
+	(23)     0E     DECTM      WHILE (CREG <> 0) WAIT
+	                               ELSE LOAD TM(data)
+	(24)*    1B     DECGOPL    IF (cond) THEN GOTO PL(data)
+	                               ELSE WHILE (CREG <> 0)
+	                               WAIT
+
+	(25)*    1A     WAIT       IF (cond) THEN GOTO PL(data)
+	                               ELSE WAIT
+
+	(26)     08     LPPL       WHILE (CREG <> 0) LOOP TO PL(data)
+	    or   08     LPPL       WHILE (CREG <> 0)
+	                               LOOP TO PL(data) AND CLEAR_EQ
+
+	(27)     0A     LPPLN      WHILE (CREG <> 0) LOOP TO PL(data)
+	                               ELSE NEST
+	    or   0A     LPPLN      WHILE (CREG <> 0)
+	                               LOOP TO PL(data) AND CLEAR_EQ
+	                           ELSE NEST
+
+	(28)     0D     CONT       CONTINUE
+
+	(29)  10 - 13   CMP        CMP TM(data) TO PL(data)
+
+	*  = If test field selects EQ, and if branch is taken,
+	     EQ flag/bit is cleared
+
+
+	       Table 2-2b.  Am29PL142 Microprogram Instruction Set
+
+	 (1)*    03     GOTOSTK    IF  (cond) THEN GOTO (STACK)
+	 (2)*    19     GOTOPL     IF  (cond) THEN GOTO PL (data)
+	 (3)*    1F     GOTOTM     IF  (cond) THEN GOTO TM (data)
+	 (4)*    18     FORK       IF  (cond) THEN GOTO PL (data)
+
+
+	                                                                 2-21
+	 (5)*    1C     CALPL      IF  (cond) THEN CALL PL (data)
+	 (6)*    1E     CALTM      IF  (cond) THEN CALL TM (data)
+	 (7)     04     LDPL       IF  (cond) THEN LOAD PL (data)
+	 (8)     06     LDTM       IF  (cond) THEN LOAD TM (data)
+
+	 (9)     15     PSH        IF  (cond) THEN PUSH
+	(10)     14     PSHPL      IF  (cond) THEN PUSH,LOAD PL (data)
+	(11)     16     PSHTM      IF  (cond) THEN PUSH,LOAD TM (data)
+	(12)     05     PSHCNTR    IF  (cond) THEN PUSH (CREG)
+
+	(13)     02     RET        IF  (cond) THEN RET
+	(14)     00     RETPL      IF  (cond) THEN RET,LOAD PL (data)
+
+	(15)     0B     DEC        IF  (cond) THEN DEC
+	(16)     0C     DECPL      WHILE (CREG <> 0) WAIT
+	                               ELSE LOAD PL (data)
+	(17)     0E     DECTM      WHILE (CREG <> 0) WAIT
+	                               ELSE LOAD TM (data)
+
+	(18)*    1D     DECGOPL    IF  (cond) THEN GOTO PL (data)
+	                               ELSE WHILE (CREG <> 0)
+	                               WAIT
+	(19)*    1A     WAITPL     IF  (cond) THEN GOTO PL (data)
+	                               ELSE WAIT
+	(20)*    1B     WAITTM     IF  (cond) THEN GOTO TM (data)
+	                               ELSE WAIT
+
+	(21)     08     LPPL       WHILE (CREG <> 0) LOOP TO PL (data)
+	    or   08     LPPL       WHILE (CREG <> 0)
+	                               LOOP TO PL (data) AND CLEAR_EQ
+
+	(22)     0A     LPTM       WHILE (CREG <> 0) LOOP TO TM (data)
+	    or   0A     LPTM       WHILE (CREG <> 0)
+	                               LOOP TO TM (data) AND CLEAR_EQ
+
+	(23)     0F     LPSTK      WHILE (CREG <> 0) LOOP TO (STACK)
+	    or   0F     LPSTK      WHILE (CREG <> 0)
+	                               LOOP TO (STACK) AND CLEAR_EQ
+
+	(24)     0D     CONT       CONTINUE
+	    or   OD     CONT       CONTINUE AND CLEAR_EQ
+
+	(25)   10 - 13  CMP        CMP TM (data) TO PL (data)
+	(26)     01     OUTPUT     IF  (cond) THEN OUTPUT
+
+	(27)     07     POP        IF  (cond) THEN POP
+	(28)     17     POPCNTR    IF  (cond) THEN POP TO (CREG)
+
+	*  = If test field selects EQ, and if branch is taken,
+	     EQ flag/bit is cleared
+
+
+	2-22
+	Note: The Am29PL131 and 29PL141 have 29 statement forms.
+	      The Am29PL142 has 28 (opcode 09 hex is reserved).
+
+	2.3.6  QUICK REFERENCE GUIDE
+
+	The  reference  guide  in the appendix of  this  manual  contains
+	flowcharts  and statement forms for each opcode in the  Am29PL14X
+	family.
+
+
+	2.4  DESIGN EXAMPLE
+
+	As an aid in learning the Am29PL14X Assembler language,  a simple
+	Am29PL141 design application is presented in detail in Chapter 4.
+	It describes the design requirements of the application and shows
+	the  assembler language programming required.  Assembler  program
+	listings and flow charts are also included.
+
+	                                                                 2-23

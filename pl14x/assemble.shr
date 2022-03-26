@@ -1,0 +1,3979 @@
+# Received: from FINHUTC.HUT.FI by FINHUTC.HUT.FI (Mailer X1.25) with BSMTP id
+ # 3021; Thu, 25 Feb 88 12:51:58 EET
+# Received: from kolvi.hut.fi by FINHUTC.HUT.FI ; 25 Feb 88 12:49:08 EET
+# Date: Thu, 25 Feb 88 12:49:29 +0200
+# From: Matti Arrnio <mea@kolvi.hut.fi>
+# Message-Id: <8802251049.AA15913@kolvi.hut.fi>
+# To: mea
+
+#    This is a shell archive.
+#    Remove everything above and including the cut line.
+#    Then run the rest of the file through sh.
+#----cut here-----cut here-----cut here-----cut here----#
+#!/bin/sh
+# shar:    Shell Archiver
+#    Run the following text with /bin/sh to create:
+#    code14x.c
+#    coffee.exp
+#    data.h
+#    exp14x.c
+#    head14x.c
+#    lexi14x.c
+#    pl131.
+#    pl141.
+#    pl142.
+#    stat14x.c
+# This archive created: Thu Feb 25 12:49:10 1988
+cat << \SHAR_EOF > code14x.c
+/* routine CODE14X.C version 3.32 June 28, 1987 for Am29PL14X Assembler */
+#include "data.h"
+/* - - - - - - - - - - - - */
+/* return integer value of a raised to the power b as in power (2,5) = 32 */
+power(a,b)
+int a , b;
+{
+    int i , j;
+    if ( b == 0 )
+        return(1);
+    for ( i = 1 , j = 1; i <= b; ++i )
+        j = j*a;
+    return(j);
+} /* POWER */
+/* - - - - - - - - - - - - */
+convert(log_val,from_this,to_this,limit)
+    /* Converts the number in FROM_THIS to a binary number in TO_THIS.
+       LOG_VAL is the maximum number of binary/bit spaces each char entry
+       in FROM_THIS takes to convert to TO_THIS
+       : convert(4,4d,x,limits) will put 0100 1101 into x ) */
+int log_val;
+char from_this[];
+char to_this[];
+int limit;
+{
+    int i , j , k , int_val;
+    char a_buffer[80];
+    char num_bits[80];
+
+    for ( i = 0, to_this[0] = '\0';
+            from_this[i] != '\0' && from_this[i] != '#'; ++i) {
+        for ( j = 0; j <= log_val; ++j )
+            num_bits[j] = '\0';
+        if ( from_this[i] >= 'a' )
+            int_val = 10 + from_this[i] - 'a';
+        else {
+            a_buffer[0] = from_this[i];
+            a_buffer[1] = '\0';
+            int_val = atoi(a_buffer);
+        }
+        if ( int_val < 2 && log_val == 1 )
+            num_bits[0] = from_this[i];
+        else {
+            for (j = 0, k = log_val - 1; j < log_val; ++j, --k) {
+                if ( int_val - power(2,k) >= 0 ) {
+                    int_val = int_val - power(2,k);
+                    num_bits[j] = '1';
+                }
+                else
+                    num_bits[j] = '0';
+            }
+        }
+        strcat(to_this,num_bits);
+    }
+    if ( strlen(to_this) > limit ) {
+        for ( i = strlen(to_this) - limit - 1; i >= 0; --i ) {
+            if ( to_this[i] == '1' )
+                return(NO);
+        }
+    }
+    a_buffer[limit] = '\0';
+    for (i = limit - 1, j = strlen(to_this) - 1; i >= 0 && j >= 0; --i, --j)
+        a_buffer[i] = to_this[j];
+    if ( j < 0 ) {
+        for (; i >= 0; --i )
+            a_buffer[i] = '0';
+    }
+    to_this[0] = '\0';
+    strcpy(to_this,a_buffer);
+    return(YES);
+} /* CONVERT */
+/* - - - - - - - - - - */
+translate(num_string,num_val,limits) /* translate into binary number */
+char num_string[];
+char num_val[];
+int limits;
+{
+    int i;
+    char tmp_buf[80];
+
+    if ( !strcmp(num_string,"-1") || !strcmp(num_string,"-") ) {
+        if ( fuse_default == '0' )
+            tmp_buf[0] = '0';
+/* invert it because the fuse map is also inverted */
+        else
+            tmp_buf[0] = '1';
+        for (i = 0; i < limits; ++i)  /* use the default value here */
+            num_val[i] = tmp_buf[0];
+        num_val[i] = '\0';
+        return(YES);
+    }
+    if ( num_string[strlen(num_string)-2] == '#' ) {
+        switch ( num_string[strlen(num_string) - 1] ) {
+        case 'b' :
+        case 'B' :
+            return(convert(1,num_string,num_val,limits));
+        case 'o' :
+        case 'O' :
+            return(convert(3,num_string,num_val,limits));
+        case 'h' :
+        case 'H' :
+            return(convert(4,num_string,num_val,limits));
+        case 'd' :
+        case 'D' :
+/* convert first to OCTAL format before calling CONVERT */
+            i = atoi(num_string);
+            sprintf(tmp_buf,"%o",i);
+            return(convert(3,tmp_buf,num_val,limits));
+        default  :
+            fprintf(stderr,"\n[Translate]\n");
+            exit(1);
+        } /* SWITCH */
+    }
+else {
+ /* default is a decimal number: convert first to OCTAL format before
+    calling CONVERT */
+        i = atoi(num_string);
+        sprintf(tmp_buf,"%o",i);
+        return(convert(3,tmp_buf,num_val,limits));
+    }
+} /* TRANSLATE */
+/* - - - - - - - - - */
+writ_word()
+{
+    extern struct word_record *tmp;
+    char num_buf[5];
+
+    if ( debug_flag == NO )
+        return;
+    fprintf(stderr,"\nPROM Contents:");
+    fprintf(bitfile,"\nPROM Contents:");
+    fprintf(stderr,
+"\nhex <dec>     OE  OPCODE POL  TEST   DATA         OUTPUT");
+    fprintf(bitfile,
+"\nhex <dec>     OE  OPCODE POL  TEST   DATA         OUTPUT");
+    for ( tmp = word_list; tmp != NULL; tmp = tmp->next_word ) {
+        if ( tmp->format_flag == 1 ) {
+            fprintf(stderr,
+"\n\t          OPCODE   CONSTANT     DATA");
+            hex_to_uc ((unsigned)tmp->word_count, num_buf);
+            fprintf(stderr,
+"\n%3s <%3d>   ",num_buf + 1, tmp->word_count);
+            fprintf(stderr,
+"[ %1s | %5s | ",tmp->oe_od,tmp->opcode);
+            fprintf(stderr,
+"%*s | %6s | %16s ]",((dev_creg_cond==0)? 7:8),
+tmp->data,tmp->constant,tmp->out);
+            fprintf(bitfile,
+"\n\t         OPCODE   CONSTANT     DATA");
+            hex_to_uc ((unsigned)tmp->word_count, num_buf);
+            fprintf(bitfile,
+"\n%3s <%3d>   ",num_buf + 1,tmp->word_count);
+            fprintf(bitfile,
+"[ %1s | %5s | ",tmp->oe_od,tmp->opcode);
+            fprintf(bitfile,
+"%*s | %6s | %16s ]",((dev_creg_cond==0)? 7:8),
+tmp->data,tmp->constant,tmp->out);
+        }
+        else {
+            hex_to_uc ((unsigned)tmp->word_count, num_buf);
+            fprintf(stderr,
+"\n%3s <%3d>   ",num_buf + 1,tmp->word_count);
+            fprintf(stderr,
+"[ %1s | %5s | ",tmp->oe_od,tmp->opcode);
+            fprintf(stderr,
+"%1s | ",tmp->pol);
+            fprintf(stderr,
+"%3s | %6s | %16s ]",tmp->test,tmp->data,tmp->out);
+            hex_to_uc ((unsigned)tmp->word_count, num_buf);
+            fprintf(bitfile,
+"\n%3s <%3d>   ",num_buf + 1,tmp->word_count);
+            fprintf(bitfile,
+"[ %1s | %5s | ",tmp->oe_od,tmp->opcode);
+            fprintf(bitfile,
+"%1s | ",tmp->pol);
+            fprintf(bitfile,
+"%3s | %6s | %16s ]",tmp->test,tmp->data,tmp->out);
+        }
+    }
+    fprintf(stderr,"\n");
+    fprintf(bitfile,"\n");
+} /* WRIT_WORD */
+/* - - - - - - - - - - */
+messages()
+{
+fprintf(stderr,"ERROR 76 [WRITE_WORD]\n");
+} /* MESSAGES */
+/* - - - - - - - - - - */
+word_insert()
+{
+    struct word_record *a_buf , *present , *previous;
+    char buf5[80];
+    int counter;
+
+    for ( tmp = word_list; tmp != NULL; tmp = tmp->next_word )
+        if ( word.word_count == tmp->word_count) {
+            fprintf(stderr,
+"\nERROR 75 Warning: Redefinition of PROM location ");
+            fprintf(stderr,"%d\n",word.word_count);
+            fprintf(stderr,"See source line:\n%s\n",sorce_line);
+            ++errors;
+            return;
+        }
+    a_buf = (struct word_record *)malloc(sizeof(struct word_record));
+    sprintf(buf5,"%d",word.word_count);
+    mem_check(NULL,a_buf,NULL,buf5);
+    a_buf->word_count = word.word_count;
+    if ( word.oe_od[0] == '-' ) {
+        if ( translate(word.oe_od,buf5,1) == NO )
+            messages();
+        strcpy(a_buf->oe_od,buf5);
+    }
+    else
+        strcpy(a_buf->oe_od,word.oe_od);
+    if ( word.opcode[0] == '-' ) {
+        if ( translate(word.opcode,buf5,5) == NO )
+            messages();
+        strcpy(a_buf->opcode,buf5);
+    }
+    else
+        strcpy(a_buf->opcode,word.opcode);
+    if ( word.pol[0] == '-' ) {
+        if ( translate(word.pol,buf5,1) == NO )
+            messages();
+        strcpy(a_buf->pol,buf5);
+    }
+    else
+        strcpy(a_buf->pol,word.pol);
+    if ( word.test[0] == '-' ) {
+        if ( translate(word.test,buf5,testfield) == NO )
+            messages();
+        strcpy(a_buf->test,buf5);
+    }
+    else
+        strcpy(a_buf->test,word.test);
+    if ( word.data[0] == '-' ) {
+        if ( translate(word.data,buf5,datafield) == NO )
+            messages();
+        strcpy(a_buf->data,buf5);
+    }
+    else
+        strcpy(a_buf->data,word.data);
+    if ( word.out[0] == '-' ) {
+        if ( translate(word.out,buf5,outfield) == NO )
+            messages();
+        strcpy(a_buf->out,buf5);
+    }
+    else
+        strcpy(a_buf->out,word.out);
+/*
+added 4/8/87: if an output polarity configuration was set, then wherever
+a '1' is seen, this is active high, and a '0' will mean active low. This
+is done for the number of outputs specified by OUTFIELD.
+*/
+    if (output_polarity[0] != '\0') {
+        for (counter = 0; counter < outfield; ++counter) {
+            if (output_polarity[counter] == '\0')
+                err(FATAL,"Output Polarity Error");
+            switch(output_polarity[counter])
+            { case '0' : switch(a_buf->out[counter])
+                     {    case '0': a_buf->out[counter] = '1';
+                          break;
+                    case '1': a_buf->out[counter] = '0';
+                          break;
+                    default : err(FATAL,"Must be 0/1");
+                          break;
+                     } /* SWITCH */
+                     break;
+              case '1' : break;
+              default  : err(FATAL,"Another POLARITY Error");
+                     break;
+            } /* SWITCH */
+        } /* FOR */
+    } /* IF output_polarity */
+    a_buf->next_word = NULL;
+    a_buf->format_flag = word.format_flag;
+    strcpy(a_buf->constant,word.constant);
+    if ( word_list == NULL )
+        word_list = a_buf;
+    else {
+        for (present = word_list, previous = word_list;present != NULL;
+             present = present->next_word) {
+            if ( a_buf->word_count <= present->word_count ) {
+                if ( previous == word_list
+                        && previous == present ) {
+                    a_buf->next_word = word_list;
+                    word_list = a_buf;
+                }
+                else {
+                    a_buf->next_word = previous->next_word;
+                    previous->next_word = a_buf;
+                }
+                break;
+            }
+            else
+                previous = present;
+        } /* FOR */
+        if ( present == NULL )
+            previous->next_word = a_buf;
+    } /* ELSE */
+} /* WORD_INSERT */
+/* - - - - - - - - - - */
+term_list_insert(the_list)
+struct com_string *the_list;
+{
+    struct com_string *temp , *the_tail;
+
+    for ( temp = the_list; temp != NULL; temp = temp->next_com_string ) {
+        if (!(strcmp(temp->var_string,db_record.var_string))) {
+            err(WARNING,"ERROR 73-2 Label redefinition");
+            err_recovery(token_type,PUNCT_MARK,KEYWORD);
+        }
+        the_tail = temp;
+    }
+    entre = (struct com_string *)malloc(sizeof(struct com_string));
+    mem_check(entre,NULL,NULL,db_record.var_string);
+    strcpy( entre->var_string , db_record.var_string );
+    strcpy( entre->code     , db_record.code );
+    strcpy( entre->value      , db_record.value );
+    entre->flag1 = db_record.flag1;
+    entre->class_token = db_record.class_token;
+    entre->class_number = db_record.class_number;
+    entre->next_com_string = NULL;
+    the_tail->next_com_string = entre;
+    the_tail = entre;
+} /* TERM_LIST_INSERT */
+/* - - - - - - - - - - - - */
+an_undefined_label(item_label)
+char item_label[];
+{
+    struct word_record *a_label;
+    for (tmp = lab_undefined; tmp != NULL; tmp = tmp->next_word)
+        tail_label = tmp;
+    a_label = (struct word_record *)malloc(sizeof(struct word_record));
+    mem_check(NULL,a_label,NULL,item_label);
+    strcpy( a_label->oe_od , word.oe_od);
+    strcpy( a_label->opcode , word.opcode );
+    strcpy( a_label->pol , word.pol );
+    strcpy( a_label->test , word.test );
+    strcpy( a_label->data ,item_label );
+    strcpy( a_label->out , word.out );
+    strcpy( a_label->constant , word.constant );
+    a_label->word_count = word.word_count;
+    a_label->format_flag = word.format_flag;
+    a_label->lab_line = line_number;
+    a_label->next_word = NULL;
+    if (lab_undefined == NULL) {
+        lab_undefined = a_label;
+        tail_label = a_label;
+        return;
+    }
+    tail_label->next_word = a_label;
+    tail_label = a_label;
+} /* AN_UNDEFINED_LABEL */
+/* - - - - - - - - - */
+in_list(a_list,key)
+struct com_string *a_list;
+char key[];
+{
+    struct com_string *x;
+    for ( x = a_list; x != NULL; x = x->next_com_string ) {
+        if (!strcmp (key,x->var_string))
+            return(YES);
+    }
+    return(NO);
+} /* IN_LIST */
+/*- - - - - - - - - - */
+cln_the_list(list_name)
+struct com_string *list_name;
+{
+    struct com_string *temp;
+    while (list_name != NULL) {
+        temp = list_name->next_com_string;
+        free ((char *)list_name);
+        list_name = temp;
+    }
+} /* CLN THE LIST */
+/* - - - - - - - - - - */
+arch_insert(name_feature,addr_feature,dflt_feature)
+char name_feature[];
+int addr_feature,dflt_feature;
+{ int i;
+  struct com_string *runner;
+
+for (i = 0; name_feature[i] != '\0' && i < 40; ++i) {
+  if (isupper(name_feature[i]))
+    name_feature[i] = tolower(name_feature[i]);
+} /* FOR */
+entre = (struct com_string *)malloc(sizeof(struct com_string));
+mem_check(entre,NULL,NULL,"entre in arch");
+strcpy(entre->var_string,name_feature);
+strcpy(entre->code, "!");
+strcpy(entre->value,"!");
+entre->flag1 = -1;
+entre->class_token = addr_feature;
+entre->class_number = dflt_feature;
+entre->next_com_string = NULL;
+if (arch_list == NULL)
+  arch_list = entre;
+else {
+  for (runner = arch_list;
+       runner->next_com_string != NULL;
+       runner = runner->next_com_string)
+    ; /* find the last item on this list */
+  runner->next_com_string = entre;
+} /* ELSE */
+} /* ARCH_INSERT */
+/* - - - - - - - - - - */
+read_data_base()
+{ int out_loop; /* flag used to leave a FOR loop */
+    char thing[80];
+    fp = fopen(part_name,"r");
+    if ( fp == NULL ) {
+        fprintf(stderr,"\nERROR 11 Cannot open database\n");
+        exit(1);
+    }
+    for (; fscanf(fp,"%s",thing) != EOF; ) {
+        if (thing[0] == '#')
+            fgets(thing,79,fp);
+        else {     /* read the memory limits for the device */
+            if ( thing[0] == '@' ) {
+                fscanf(fp,"%d %d %d %d %d %d %d",
+                    &device_limit,&dev_creg_cond,
+                    &testfield,&datafield,
+                    &outfield,&wordlength,&ssr_available);
+                break;
+            }
+            else {
+                fprintf(stderr,
+"\nERROR 11 incorrect dbase file [%s]\n",part_name);
+                exit(1);
+            }
+        }
+    }
+    for (out_loop = NO;fscanf(fp,"%s",thing) != EOF;) {
+        switch(thing[0]) {
+        case '#' : fgets(thing,79,fp);
+               break;
+/* read architecture features for the device */
+        case '+' : fscanf(fp,"%s %d %d",
+                arch_name,&arch_addr,&arch_dflt);
+               if (arch_name[0] == '0')
+                out_loop = YES; /* no arch features */
+               else
+                   arch_insert(arch_name,arch_addr,arch_dflt);
+               break;
+        default  : fprintf(stderr,
+"\nError reading architecture file [%s]\n",part_name);
+               exit(1);
+        } /* SWITCH */
+        if (out_loop == YES)
+            break;
+    } /* FOR */
+    for (; fscanf(fp,"%s",thing) != EOF && !feof(fp); ) {
+        if ( thing[0] == '#' )    /* read the available conditions */
+            fgets(thing,79,fp);
+        else {
+            if ( thing[0] != '@' )
+                break;
+            fscanf(fp,"%s",thing);
+            strcpy(db_record.var_string,thing);
+            fscanf(fp,"%s",thing);
+            fscanf(fp,"%s",thing);
+            strcpy(db_record.value,thing);
+            db_record.flag1 = -1;
+            db_record.class_token = -1;
+            db_record.class_number = -1;
+            term_list_insert(cond_list);
+        }
+    }
+    for (; fscanf(fp,"%s",thing) != EOF && !feof(fp); ) {
+            /* read the opcode/high level statement types */
+        db_record.flag1 = NO;
+        if ( thing[0] == '#' )
+            fgets(thing,79,fp);
+        else {
+            if ( thing[0] == '*' ) {
+                fscanf(fp,"%s",thing);
+                strcpy(db_record.code,thing);
+
+                fscanf(fp,"%s",thing);
+                strcpy(db_record.value,thing);
+
+                fscanf(fp,"%s",thing);
+                fscanf(fp,"%s",thing);
+                strcpy(db_record.var_string,thing);
+
+                db_record.flag1 = YES;
+                db_record.class_token = -1;
+                db_record.class_number = -1;
+                term_list_insert(com_list);
+            }
+            else {
+                fprintf(stderr,"\nERROR 13 Check database\n");
+                exit(1);
+            }
+        }
+    }
+    if ( fp != NULL ) {
+        fclose(fp);
+        fp = NULL;
+    }
+} /* READ DATA BASE */
+/* - - - - - - - - - - - - */
+sumcheck()
+{
+    unsigned int ascii_total, ascii_val;
+    int ch_fgetc;
+    char chck_buf[5];
+
+    if (out_fp != NULL) {
+            fclose(out_fp);
+        out_fp = NULL;
+    }
+    out_fp = fopen(fuse_file,"r");
+    ascii_total = 0;
+    while ( !feof(out_fp) ) {
+        ch_fgetc = fgetc(out_fp);
+        ascii_val = (unsigned)ch_fgetc;
+        if (ch_fgetc == EOF)
+            break;
+        if (ascii_val == '\n')    /* a carriage return
+                        : add a line_feed also */
+            ascii_val = '\n' + '\r';
+        ascii_total = ascii_total + ascii_val;
+    } /* WHILE */
+    fclose(out_fp);
+    out_fp = NULL;
+    out_fp = fopen(fuse_file , "a");
+    hex_to_uc (ascii_total, chck_buf);
+    fprintf(out_fp,"%s\n",chck_buf);
+    fclose(out_fp);
+    out_fp = NULL;
+} /* SUMCHECK */
+/* - - - - - - - - - - */
+/* add the number "A_COUNT" WRD_LNGTHs to CHKSUM */
+add_default(a_count,wrd_lngth,PROM_count,chksum)
+int a_count,wrd_lngth,PROM_count;
+unsigned int *chksum;
+{ int a,b,v,x;
+for (a = 1,b=1;a < a_count;++a,++b) {
+  for (v=wrd_lngth*(b+PROM_count),x=0; x < wrd_lngth; ++x) {
+    *chksum = *chksum + (1 << ((v+x)%8));
+  } /* FOR */
+} /* FOR */
+} /* ADD_DEFAULT */
+/* - - - - - - - - - - */
+make_fuse_map()
+{
+    char chck_buf[5],jedec_buf[80];
+    struct word_record *ptr1;
+    struct com_string *runner;
+    unsigned int checksum;
+    int i,j,b,fill_space;
+
+    fill_space = 0;
+    if (pl131_to_141 == YES) {
+        wordlength = wordlength + 4;
+        fill_space = 4;
+    }
+    if (fuse_default == '0')
+        i = 1;
+    else
+        i = 0;
+    if ( out_fp != NULL ) {
+        fputc(2,out_fp);  /* put a Ctrl-B or <STX> in the file */
+        fprintf(out_fp,
+"[%s] JEDEC map for device [%s]*\nF%d*\n",file_name,part_name,i);
+    }
+    fprintf(stderr,
+"[%s] JEDEC map for device [%s]*\nF%d*\n",file_name,part_name,i);
+
+/* Check if the first WORD_COUNT words were skipped and if the default state
+   of undefined words is to be 0. The first WORD_COUNT words that were
+   skipped are now actually '1's in the JEDEC fuse map (a '1' will blow the
+   fyuse and thereby make the output look like a 0 ) and must be added to
+   the checksum.
+*/
+    ptr1 = word_list;
+    checksum = 0;
+    if (ptr1 != NULL && fuse_default == '0') {
+        if (ptr1->word_count > 0) {
+            j = ptr1->word_count+1;
+            add_default(j,wordlength,-1,&checksum);
+        }
+    } /* WORD_LIST != NULL */
+    /* === */
+    for (; ptr1 != NULL; ptr1 = ptr1->next_word) {
+        jedec_buf[0] = '\0';
+        if (pl131_to_141 == YES) {
+            strcpy(jedec_buf,FILL_131);
+        } /* IF */
+        strcat(jedec_buf,ptr1->oe_od);
+        strcat(jedec_buf,ptr1->opcode);
+        if ( ptr1->format_flag == 0 ) {
+/* general microinstruction format */
+            strcat(jedec_buf,ptr1->pol);
+            strcat(jedec_buf,ptr1->test);
+            strcat(jedec_buf,ptr1->data);
+        }
+        else {  /* compare microinstruction format */
+            strcat(jedec_buf,ptr1->data);
+            strcat(jedec_buf,ptr1->constant);
+        }
+        strcat(jedec_buf,ptr1->out);
+/* +++ */    for (j=0,b=wordlength*(ptr1->word_count);j<wordlength;++j) {
+            if (jedec_buf[j] == '0')
+/* do shifting */        checksum = checksum + (1 << ((b+j)%8));
+        } /* FOR +++ */
+/* if the fuse default flag is '0', then the link checksum must be calculated
+   differently. According to the JEDEC standard of May 1986, the 'C' field must
+   contain the link checksum from all the fuses, not just the specified fuses.
+   Since the unspecified fuses are now '1's, these have to be added to the un-
+   signed int CHECKSUM.
+
+   In AA, if the next word is NULL but the present word count is not the
+   DEVICE_LIMIT-1, then all the words from this word count until the last
+   word must be added.
+*/
+        if (fuse_default == '0') {
+            if (ptr1->next_word != NULL) {
+/* find the count of the next word */
+                j = ptr1->next_word->word_count
+                            - ptr1->word_count;
+                if (j > 1) { /* more than 1 word separation */
+                    add_default(j,wordlength,
+                        ptr1->word_count,&checksum);
+                }
+            } /* IF ptr1 */
+            else { /* AA: if not the last word */
+                j = device_limit - ptr1->word_count;
+                if (j > 1) { /* more than 1 word separation */
+                    add_default(j,wordlength,
+                        ptr1->word_count,&checksum);
+                }
+            }
+        } /* IF fuse_default = 0 */
+        if ( out_fp != NULL )
+            fprintf(out_fp,"L%04d  ",
+                    (ptr1->word_count*wordlength));
+        fprintf(stderr,"L%04d  ",(ptr1->word_count*wordlength));
+        for (i = 0; i < wordlength; ++i) { /* ### */
+            if ( ptr1->format_flag == 0 ) {
+                if (i == (1+fill_space) || i == (6+fill_space)
+                     || i == (7+fill_space)
+                     || i == (7+testfield+fill_space)
+                     || i == (7+testfield+
+                            datafield+fill_space)) {
+                    fprintf(stderr," ");
+                    if ( out_fp != NULL )
+                        fprintf(out_fp," ");
+                }
+            }
+            else {
+                if ( i == (1+fill_space) ||
+                     i == (4+fill_space) ||
+                         i == (4+datafield+fill_space) ||
+                         i == (4+(datafield*2)+fill_space)) {
+                    if (i == (4+fill_space))
+                        fprintf(stderr,"  ");
+                    else
+                        fprintf(stderr," ");
+                    if ( out_fp != NULL ) {
+                        if (i == (4+fill_space))
+                          fprintf(out_fp,"  ");
+                        else
+                          fprintf(out_fp," ");
+                    }
+                }
+            }
+            if ( jedec_buf[i] == '0' ) {
+                if ( out_fp != NULL )
+                    fprintf(out_fp,"1");
+                fprintf(stderr,"1");
+            }
+            else {
+                if ( out_fp != NULL )
+                    fprintf(out_fp,"0");
+                fprintf(stderr,"0");
+            }
+        } /* ### */
+        if ( out_fp != NULL )
+            fprintf(out_fp," *\n");
+        fprintf(stderr," *\n");
+    } /* FOR === */
+/* if the USE_SSR flag is YES, then add the SSR fuse and any other
+   architecture fuses from the ARCH_LIST */
+    if (use_ssr == YES) {
+        for (runner = arch_list;
+             runner != NULL;
+             runner = runner->next_com_string) {
+        if ( out_fp != NULL )
+            fprintf(out_fp,"L%04d  %d *\n",
+                runner->class_token,runner->class_number);
+        fprintf(stderr,"L%04d  %d *\n",runner->class_token,
+                runner->class_number);
+        if (runner->class_number == 1)
+            checksum = checksum +
+                 (1 << ((runner->class_token)%8));
+        } /* FOR */
+    } /* IF use_ssr */
+    hex_to_uc (checksum, chck_buf);
+    if ( out_fp != NULL ) {
+        fprintf(out_fp,"C%s*\n",chck_buf);
+        fputc(3,out_fp); /* put Ctrl-C at end of file */
+        fclose(out_fp);
+        out_fp = NULL;
+        sumcheck();    /* calculate sumcheck for this file */
+    }
+    fprintf(stderr,"C%s*\n",chck_buf);
+} /* MAKE_FUSE_MAP */
+/* - - - - - - - - */
+/*
+Routine to take a hex number and produce an ascii string with upper case A-F
+in it. This routine is for portability of various compilers which produce
+different results from " printf ("%x", hex_number); ".
+*/
+hex_to_uc (hex_number, str_pt)
+
+unsigned int hex_number;
+char *str_pt;
+{
+    unsigned long temp;
+    temp = hex_number;
+    temp = temp & 0x0000FFFFL;
+    sprintf (str_pt,"%04lx",temp);
+
+    for (; *str_pt != '\0'; ++str_pt) {
+        if (isalpha (*str_pt)) {
+            if (islower (*str_pt)) {
+                *str_pt = toupper (*str_pt);
+            }
+        }
+    }
+} /* HEX_TO_UC */
+/* - - - - - - - - */
+writ_table()   /* write out the symbol table */
+{
+    struct com_string *tbl_tmp;
+    if ( symtab == NO )
+        return;
+    fprintf(stderr,"\nSymbol Table");
+    fprintf(table_file,"\nSymbol Table");
+    fprintf(stderr, "\nName                 Location/Value");
+    fprintf(table_file, "\nName                 Location/Value");
+    for (tbl_tmp = def_list; tbl_tmp != NULL;
+                tbl_tmp = tbl_tmp->next_com_string) {
+        if (strcmp(tbl_tmp->var_string,"%%%%")) {
+            fprintf(stderr,"\n %-*s",20,tbl_tmp->var_string);
+            fprintf(stderr,"\t %s",tbl_tmp->value);
+            fprintf(table_file,"\n %-*s",20,tbl_tmp->var_string);
+            fprintf(table_file,"\t %s",tbl_tmp->value);
+        }
+    }
+    fprintf(stderr,"\n");
+    fprintf(table_file,"\n");
+} /* WRIT_TABLE */
+/* - - - - - - - - */
+generate_code()
+{
+    writ_word();
+    writ_table();
+    make_fuse_map();
+} /* GENERATE_CODE */
+/* - - - - - - - - */
+SHAR_EOF
+cat << \SHAR_EOF > coffee.exp
+DEVICE (PL141)
+
+DEFAULT = 1 ;
+
+DEFINE "test inputs are given name assignments"
+
+       coin = t0
+       soup_test = t1
+       choc_test = t2
+       cream_test = t3
+       sugar_test = t4
+       coffee_test = t5
+       coin_ret = cc
+       fail = eq
+
+       "output/control bits are given name assignments"
+
+       off = 0#h
+       busy = 01#h
+       cup = 02#h
+       water = 04#h
+       coffee = 08#h
+       cream = 10#h
+       sugar = 20#h
+       choclat = 40#h
+       soup = 80#h
+       cn_ret = 100#h
+       clr_inp = 200#h;
+
+BEGIN
+    .org 63#d
+"49"     clr_inp,                if(not fail) then goto pl(zero);
+    .org 0
+"wait for a coin to drop and check selection after coin detect"
+"1" zero:off,                    if (not coin) then goto pl(zero);
+"2"      clr_inp,                continue;
+"3" test:busy,                   if (coffee_test) then goto pl(cofe);
+"4"      busy,                   if (choc_test) then goto pl(choc);
+"5"      busy,                   if (soup_test) then goto pl(sup);
+"6"      busy,                   if (not coin_ret) then goto pl(test);
+"7"      busy + cn_ret + clr_inp,if (not fail) then goto pl(zero);
+
+"routine for coffee. Check for sugar &/or cream"
+"8" cofe:busy + cup,             if (not fail) then call pl(sub);
+"9"      busy + coffee + water,  if (not fail) then load pl(23);
+"10"sty2:busy + coffee + water,  while (creg <> 0) loop to pl(sty2);
+"11"     busy + water,           if (sugar_test) then goto pl(sugr);
+"12"     busy + water,           if (cream_test) then goto pl(crem);
+"13"     busy + water,           if (not fail) then load pl(60);
+"14"     busy + water,           if (not fail) then goto pl(last);
+
+"routine for sugar"
+"15"sugr:busy + sugar + water,   if (not fail) then load pl(12);
+"16"sty4:busy + sugar + water,   while(creg <> 0) loop to pl(sty4);
+"17"     busy + sugar + water,   if (cream_test) then goto pl(crm2);
+"18"     busy + water,           if (not fail) then load pl(46);
+"19"     busy + water,           if (not fail) then goto pl(last);
+
+"routine for cream if sugar is selected"
+"20"crm2:busy + cream + water,   if (not fail) then load pl(18);
+"21"sty5:busy + cream + water,   while (creg <> 0) loop to pl(sty5);
+"22"     busy + water,           if (not fail) then load pl(26);
+"23"     busy + water,           if (not fail) then goto pl(last);
+
+"routine for cream if sugar is not selected"
+"24"crem:busy + cream + water,   if (not fail) then load pl(18);
+"25"sty6:busy + cream + water,   while (creg <> 0) loop to pl(sty6);
+"26"     busy + water,           if (not fail) then load pl(40);
+"27"     busy + water,           if (not fail) then goto pl(last);
+
+"routine for dispensing chocolate"
+"28"choc:busy + cup,             if (not fail) then call pl(sub);
+"29"     busy + choclat + water, if (not fail) then load pl(33);
+"30"sty7:busy + choclat + water, while (creg <> 0) loop to pl(sty7);
+"31"     busy + water,           if (not fail) then load pl(52);
+"32"     busy + water,           if (not fail) then goto pl(last);
+
+"routine for dispensing soup"
+"33"sup: busy + cup,             if (not fail) then call pl(sub);
+"34"     busy + soup + water,    if (not fail) then load pl(18);
+"35"sty8:busy + soup + water,    while (creg <> 0) loop to pl(sty8);
+"36"     busy + water,           if (not fail) then load pl(58);
+"37"sty9:busy + water,           while (creg <> 0) loop to pl(sty9);
+"38"     busy + water,           if (not fail) then load pl(07);
+"39"     busy + water,           if (not fail) then goto pl(last);
+
+"routine for finishing 10 sec water and wait for cup removal"
+"40"last:busy + water,           while (creg <> 0) loop to pl(last);
+"41"     busy,                   if (not fail) then load pl(32);
+"42"sty3:busy,                   while (creg <> 0) loop to pl(sty3);
+"43"     busy + clr_inp,         if (not fail) then goto pl(zero);
+
+"routine for waiting for cup to be in place and 1 sec. water"
+"44"sub: busy,                   if (not fail) then load pl(13);
+"45"stay:busy,                   while (creg <> 0) loop to pl(stay);
+"46"     busy + water,           if (not fail) then load pl(7);
+"47"sty1:busy + water,           while (creg <> 0) loop to pl(sty1);
+"48"     busy + water,           if (not fail) then ret;
+
+end.
+SHAR_EOF
+cat << \SHAR_EOF > data.h
+/*
+Module DATA.H Version 3.32 June 28, 1987 for Am29PL14X Assembler
+DATA.H: contains all define, include and variable declarations
+Note: One and only one of the following 4 lines must be '1'.
+      The others must be 0
+*/
+#define vms        0    /* for vax vms systems */
+#define unix        0    /* for generic unix systems */
+#define comp_inv_c86    0    /* for IBM-PC computer innovations C86 */
+#define microsoft    1    /* for IBM-PC microsoft C V4.0 */
+
+#if vms
+#include stdio
+#include ctype
+#include math
+#elif unix
+#include <stdio.h>
+#include <ctype.h>
+#include <math.h>
+#elif comp_inv_c86
+#include "stdio.h"
+#elif microsoft
+#include "stdio.h"
+#include "ctype.h"
+#endif
+
+#ifdef DEF_MAIN
+#define STORAGE
+#else
+#define STORAGE extern
+#endif
+
+#define COND1 1
+#define COND2 2
+#define LIST_COND 1
+#define LIST_DEFINE 2
+
+#define   LOW         0
+#define   HIGH        1
+
+#define   THE_END     1
+#define   VARIABLE    2
+#define   NUMBER      3
+#define   KEYWORD     4
+#define   WHITE_SPACE 5
+#define   PUNCT_MARK  6
+
+#define   VALID   0
+#define   YES     1
+#define   NO      2
+#define   FATAL   3
+#define   WARNING 4
+#define   NOTICE  5
+
+#define   NO_BASE     -1
+#define   BINARY       0
+#define   OCTAL        1
+#define   DECIMAL      2
+#define   HEXADECIMAL  3
+#define   NOT_A_NUMBER 4
+
+#define NOT_A_KEYWORD  0
+#define DEVICE         1
+#define DEFAULT        2
+#define SSR            3
+#define DISABLE        4
+#define ENABLE         5
+#define DEFINE         6
+#define TEST_CONDITION 7
+#define BEGIN          8
+#define END            9
+#define OE            10
+#define OD            11
+#define IF            12
+#define THEN          13
+#define ELSE          14
+#define CONTINUE      15
+#define CMP           16
+#define TM            17
+#define TO            18
+#define PL            19
+#define RET           20
+#define LOAD          21
+#define GOTO          22
+#define PUSH          23
+#define DEC           24
+#define WAIT          25
+#define CALL          26
+#define NEST          27
+#define NESTED          28
+#define NOT           29
+#define WHILE          30
+#define SREG          31
+#define CREG          32
+#define LOOP          33
+#define OUTPUT_DEFAULT 34
+#define LABEL         35
+#define POP           36
+#define OUTPUT        37
+#define PASS_DFLT     38
+#define STACK         39
+#define OUT_POLARITY  40
+#define ARCHITECTURE    41
+
+#define END_FILE -2
+#define END_STRING "-2"
+#define FILL_131 "0011"
+#define BIN_COMPARE "ERROR 16 compare test to a binary number"
+#define EOF_MSG "\nERROR 92 Unexpected end of file\n"
+#define DATA_EXCD "ERROR 26 DATA field limit exceeded"
+#define TEST_EXCD "ERROR 28 TEST field limit exceeded"
+#define ENCLOSE_DATA "ERROR 20 enclose data field in ()"
+#define SEPARATE_OUT "ERROR 63 put ',' to separate output section"
+#define LOOK_OE "ERROR 34 looking for number after OE/OD, or label"
+#define EQ_LOOK "ERROR 29 looking for '=' sign"
+#define OUT_EXCEED "ERROR 54 OUTPUT field limit exceeded"
+#define DFLT_EXCD "ERROR 19 default output value exceeds limit"
+#define SPEC_DEFAULT "specify default output value using DEFAULT_OUTPUT"
+#define BIN_DEFAULT "ERROR 18 default value should be binary numbers"
+
+extern char *malloc();
+extern char *realloc();
+extern int free();
+extern char *strcat();
+extern char *strcpy();
+extern char *strncat();
+extern char *strncpy();
+extern int fgetc();
+extern char *fgets();
+extern double pow();
+extern FILE *fopen();
+extern int fclose();
+
+/*
+void free();
+void exit();
+*/
+
+STORAGE
+struct com_string  {
+    char var_string[80];
+    char code[20];
+    char value[20];
+    int flag1;
+    int class_token;
+    int class_number;
+    struct com_string *next_com_string;
+};
+STORAGE
+struct com_string *com_list, *cond_list, *def_list,
+    *lab_list, *entre, db_record, *arch_list;
+
+STORAGE
+struct word_record {
+    int word_count;
+    char oe_od[5];
+    char opcode[15];
+    char pol[5];
+    char test[10];
+    char data[20];
+    char out[40];
+    char constant[20];
+    int format_flag;
+    int lab_line;
+    struct word_record *next_word;
+};
+STORAGE
+struct word_record *word_list, word, *lab_undefined, *tmp, *tail_label;
+
+STORAGE
+struct stk_form {
+    char stk_item[20];
+    struct stk_form *next_stk_item;
+};
+STORAGE
+struct stk_form *the_stack, *operator_stk;
+
+STORAGE
+char fuse_file[80],    /* contains fuse map output file name */
+     icon[40],command_line[256],con_test[40],part_name[40],
+     sorce_line[256], token[40], last_token[40], stk_token[40],
+     *file_name,fuse_default, ssr_default,a_deflt_test[40],dflt_out[40],
+     dflt_pol[10],output_polarity[40],arch_name[40];
+
+STORAGE
+int character,screen_position, token_type, num_type, line_number,
+    the_keyword, lexi_i, end_of_file, end_found, errors,
+    cond_errors, get_new_token, eq_sign, test_val,
+    negation, con_type, i_global;
+STORAGE  /* set when reading database */
+int device_limit,dev_creg_cond,outfield,testfield,datafield,wordlength,
+    arch_addr,arch_dflt,dotswitch;
+STORAGE
+int pc,debug_flag,dflt_present,resolve_label,
+    got_one,last_stk_type,symtab,use_ssr,ssr_available,pl131_to_141;
+
+STORAGE FILE *input_file, *out_fp, *bitfile, *err_file, *table_file, *fp;
+SHAR_EOF
+cat << \SHAR_EOF > exp14x.c
+/* routine EXP14X.C version 3.32 June 28, 1987 for Am29PL14X Assembler */
+#include "data.h"
+/*    -    -    -   */
+cln_stack_list(amount)    /* tells how many items to remove and reclaim
+               from THE_STACK list. If AMOUNT = 0 then
+               clean the whole list
+             */
+int amount;        /* number of entries to pop */
+{
+    struct stk_form *ptr;
+    int i;
+
+    ptr = the_stack;
+    if ( amount > 0 ) {
+        for ( i = 0; i < amount && ptr != NULL; ++i ) {
+            the_stack = the_stack->next_stk_item;
+            free ((char *)ptr);
+            ptr = the_stack;
+        }
+        if (i < amount)
+            err(FATAL,"ERROR 22 Cleaning STACK list");
+        if ( ptr == NULL )
+            the_stack = NULL;
+    }
+    else {
+        while (ptr != NULL) {
+            the_stack = the_stack->next_stk_item;
+            free ((char *)ptr);
+            ptr = the_stack;
+        }
+        the_stack = NULL;
+    }
+    if ( the_stack == NULL )
+        last_stk_type = PUNCT_MARK;
+} /* CLEAN STACK LIST */
+/*    -    -    -    -    -    -    -    */
+cln_operator_list(amount) /* tells how many items to remove and reclaim
+                 from OPERATOR_STK list. If AMOUNT = 0 then
+                 clean the whole list
+               */
+int amount;
+{
+    struct stk_form *ptr;
+    int i;
+
+    ptr = operator_stk;
+    if ( amount > 0 ) {
+        for ( i = 0; i < amount && ptr != NULL; ++i ) {
+            operator_stk = operator_stk->next_stk_item;
+            free ((char *)ptr);
+            ptr = operator_stk;
+        }
+        if (i < amount)
+            err(FATAL,"ERROR 23 Cleaning OPERATOR list");
+        if ( ptr == NULL )
+            operator_stk = NULL;
+    }
+    else {
+        for (; ptr != NULL; ) {
+            operator_stk = operator_stk->next_stk_item;
+            free ((char *)ptr);
+            ptr = operator_stk;
+        }
+        operator_stk = NULL;
+    }
+} /* CLEAN_OPERATOR_LIST */
+/*    -    -    -    -    -    -    -    */
+stk_eval(action)
+char action;
+{
+    int i;
+    char oper1[20] , oper2[20];
+    struct stk_form *stk_entry;
+
+    switch(action) {
+    case ')' :
+        for (; operator_stk->stk_item[0] != '('; )
+            stk_eval(operator_stk->stk_item[0]);
+        cln_operator_list(1);        /* remove the '(' */
+        break;
+    case '*' :
+    case '+' :
+        if ( operator_stk == NULL )
+            break;
+        strcpy(oper1,the_stack->stk_item);
+        cln_stack_list(1);        /* remove one item from
+                           the operand stack */
+        strcpy(oper2,the_stack->stk_item);
+        cln_stack_list(1);
+        if (action == '+') {
+            for ( i = 0; i < strlen(oper1); ++i )
+                if (oper1[i] == '1' || oper2[i] == '1')
+                    oper1[i] = '1';
+                else
+                    oper1[i] = '0';
+        }
+        else {
+            for ( i = 0; i < strlen(oper1); ++i )
+                if (oper1[i] == '1' && oper2[i] == '1')
+                    oper1[i] = '1';
+                else
+                    oper1[i] = '0';
+        }
+        cln_operator_list(1);
+        stk_entry = (struct stk_form *)malloc(sizeof(struct stk_form));
+        mem_check(NULL,NULL,stk_entry,oper1);
+        strcpy(stk_entry->stk_item,oper1);
+        stk_entry->next_stk_item = NULL;
+        if ( the_stack == NULL )
+            the_stack = stk_entry;
+        else {
+            stk_entry->next_stk_item = the_stack;
+            the_stack = stk_entry;
+        }
+        break;
+    default  :
+        err(FATAL,"ERROR 25 STK_EVAL");
+        break;
+    } /* SWITCH */
+} /* STK_EVAL */
+/*  -    -    -    -    -    */
+put_on_stack(item,result)    /* put ITEM on the stack. If ITEM is '#' then
+                   evaluate the stack and put it in RESULT
+                */
+char item[] , result[];
+{
+    struct stk_form *stk_runner , *stk_entry;
+
+    result[0] = '\0';
+    if ((token_type == VARIABLE || token_type == NUMBER)
+             && item[0] != '#') {
+        if (the_stack != NULL) {
+            if ( last_stk_type != PUNCT_MARK )
+                err(FATAL,
+"ERROR 71 put operator between operands");
+            else
+                if (stk_token[0] != '\0' && stk_token[0] == ')')
+                    err(FATAL,
+"ERROR 68 put operator between nested operands");
+        }
+        stk_entry = (struct stk_form *)malloc(sizeof(struct stk_form));
+        mem_check(NULL,NULL,stk_entry,item);
+        strcpy(stk_entry->stk_item,item);
+        stk_entry->next_stk_item = NULL;
+        if ( the_stack == NULL )
+            the_stack = stk_entry;
+        else {
+            stk_entry->next_stk_item = the_stack;
+            the_stack = stk_entry;
+        }
+        last_stk_type = token_type;
+        return;
+    } /* IF */
+    if ( item[0] == '+' || item[0] == '*' ) {
+        if ( last_stk_type == PUNCT_MARK && operator_stk != NULL )
+            if ( stk_token[0] != '\0' && stk_token[0] != ')' ) {
+                err(FATAL,
+"ERROR 67 put operand between logical operators");
+                return(NO);
+            }
+    }
+    switch(item[0]) {
+    case ')' :
+        stk_eval(')');
+        break;
+    case '(' :
+        if (last_stk_type == NUMBER)
+            err(FATAL,"put operator between operands");
+    case '+' :
+        if (operator_stk != NULL && item[0] != '(') {
+            /* the previous case falls thru here */
+            if (operator_stk->stk_item[0] == '*')
+                stk_eval('*'); /* evaluate AND first
+                           before pushing the '+' */
+            else
+                if (operator_stk->stk_item[0] == '+')
+                    stk_eval('+');
+        }
+        stk_entry = (struct stk_form *)malloc(sizeof(struct stk_form));
+        mem_check(NULL,NULL,stk_entry,item);
+        strcpy(stk_entry->stk_item,item);
+        stk_entry->next_stk_item = NULL;
+        if ( operator_stk == NULL )
+            operator_stk = stk_entry;
+        else {
+            stk_entry->next_stk_item = operator_stk;
+            operator_stk = stk_entry;
+        }
+        last_stk_type = PUNCT_MARK;
+        break;
+    case '*' :
+        if (operator_stk != NULL) {
+            if ( operator_stk->stk_item[0] == '*' )
+                stk_eval('*');
+        }
+        stk_entry = (struct stk_form *)malloc(sizeof(struct stk_form));
+        mem_check(NULL,NULL,stk_entry,"*");
+        strcpy(stk_entry->stk_item,item);
+        stk_entry->next_stk_item = NULL;
+        if ( operator_stk == NULL )
+            operator_stk = stk_entry;
+        else {
+            stk_entry->next_stk_item = operator_stk;
+            operator_stk = stk_entry;
+        }
+        last_stk_type = PUNCT_MARK;
+        break;
+    case '#' :
+        if ( operator_stk != NULL ) {
+            stk_runner = operator_stk;
+            for (; stk_runner != NULL;
+                stk_runner = stk_runner->next_stk_item )
+                stk_eval(stk_runner->stk_item[0]);
+        }
+        if (operator_stk == NULL) {
+            if (the_stack == NULL)
+                err(FATAL,"ERROR 90 excess operator");
+            else
+                strcpy(result,the_stack->stk_item);
+        }
+        else
+            err(FATAL,"unmatched parenthesis/missing operand");
+        cln_stack_list(0);
+        cln_operator_list(0);
+        break;
+    default  :
+        err(FATAL,"ERROR 24 STACK PUSH Error");
+        exit (1);
+    } /* SWITCH */
+} /* PUT_ON_STACK */
+/*    -    -    -    -    -    -    -    */
+SHAR_EOF
+cat << \SHAR_EOF > head14x.c
+/* routine HEAD14X.C version 3.32 June 28, 1987 for Am29PL14X Assembler */
+#define DEF_MAIN 1
+#include "data.h"
+/* - - - - - */
+/* auxiliary error function: writes MSG to FILE_DEST */
+aux_err(file_dest,severity,msg)
+FILE *file_dest;
+int severity;
+char *msg;
+{
+    int i;
+
+    if (severity == NOTICE)
+        fprintf(file_dest,"\nNote: %s",msg);
+    else
+        fprintf(file_dest,"\nError %d: %s",errors,msg);
+    fprintf(file_dest,"\nline #%d: \n%s\n",line_number,sorce_line);
+    if ( screen_position <= strlen(sorce_line) ) {
+        for ( i = 0; i <= screen_position - 2 ; ++i ) {
+            if ( sorce_line[i] != '\t' )
+                fprintf(file_dest," ");
+            else
+                fprintf(file_dest,"\t");
+        }
+    }
+    else {
+        fprintf(file_dest,"\nMessage Error");
+        return;
+    }
+    fprintf(file_dest,"^\n");
+    fprintf(file_dest,"--------------\n");
+} /* AUX_ERR */
+/* - - - - - */
+err(severity,msg)   /* print out the error message and pinpoint the error */
+int severity;
+char *msg;
+{
+    if (severity == WARNING || severity == FATAL)
+        ++errors;
+    if ( err_file != NULL )
+        aux_err(err_file,severity,msg);
+    aux_err(stdout,severity,msg);
+    if (severity == FATAL)
+        exit(1);
+} /* ERR */
+/* - - - - - - - - */
+pars_name() /* check if this is an ASM+ supported device <--- 10 */
+{
+    FILE *test;
+    lex(icon);
+    test = fopen(icon,"r");
+    if ( test == NULL ) {
+        fprintf(stderr,
+        "\nERROR 4 [%s] not supported by ASM14X\n",icon);
+        exit(1);
+    }
+    strcpy(part_name,icon);
+    fclose(test);
+    read_data_base();
+    return(VALID);
+
+} /* PARS_NAME */
+/* - - - - - - - - - */
+pars_test()
+{
+    lex(icon);
+    if ( icon[0] != '=' ) {
+        err(WARNING,EQ_LOOK);
+        err_recovery(token_type,VARIABLE,NUMBER);
+    }
+    condition_parse(TEST_CONDITION);
+    dflt_present = YES;
+    strcpy(a_deflt_test,word.test);
+    strcpy(dflt_pol,word.pol);
+    lex(icon);
+    if ( icon[0] != ';' ) {
+        err(WARNING,"ERROR 30 looking for ';'");
+        err_recovery(token_type,KEYWORD,PUNCT_MARK);
+    }
+    lex(icon);  /* get the next token already */
+} /* PARS_TEST */
+/* - - - - - - - */
+default_parse()
+{
+    lex(icon);
+    if ( icon[0] != '=' ) {
+        err(WARNING,EQ_LOOK);
+        err_recovery(token_type,NUMBER,WHITE_SPACE);
+    }
+    lex(icon);
+    if ( (num_type != BINARY && num_type != DECIMAL)
+        || (icon[0] != '0' && icon[0] != '1') ) {
+        err(WARNING,BIN_DEFAULT);
+        err_recovery(token_type,KEYWORD,PUNCT_MARK);
+    }
+    else
+        fuse_default = icon[0];
+/* either a '0' or a '1' for the default value */
+    lex(icon);
+    if ( icon[0] != ';' ) {
+        err(WARNING,"ERROR 64 put ';' here");
+        err_recovery(token_type,KEYWORD,WHITE_SPACE);
+    }
+} /* DEFAULT_PARSE */
+/* - - - - - - - - - - - */
+ssr_parse()
+{ struct com_string *searcher;
+    lex(icon);
+    if ( icon[0] != '=' ) {
+        err(WARNING,EQ_LOOK);
+        err_recovery(token_type,NUMBER,WHITE_SPACE);
+    }
+    lex(icon);
+    if ( (num_type != BINARY && num_type != DECIMAL)
+        || (icon[0] != '0' && icon[0] != '1') ) {
+        err(WARNING,BIN_DEFAULT);
+        err_recovery(token_type,KEYWORD,PUNCT_MARK);
+    }
+    else {
+        for (searcher = arch_list;
+             searcher != NULL;
+             searcher = searcher->next_com_string) {
+            if (!strcmp(searcher->var_string,"ssr")) {
+                searcher->class_number = atoi(icon);
+                break;
+            } /* IF */
+        } /* FOR */
+        if (searcher == NULL)
+            err(FATAL,"Database: SSR feature undefined");
+    } /* ELSE */
+    lex(icon);
+    if ( icon[0] != ';' ) {
+        err(WARNING,"ERROR 24 put ';' here");
+        err_recovery(token_type,KEYWORD,VARIABLE);
+    }
+} /* SSR_PARSE */
+/* - - - - - - - - - - - - - - */
+get_value(the_key,the_list,buf)
+char the_key[];
+struct com_string *the_list;
+char buf[];
+{
+    struct com_string *ptr;
+
+    for ( ptr = the_list; ptr != NULL ; ptr = ptr->next_com_string ) {
+        if ( !strcmp(the_key,ptr->var_string) ) {
+            strcpy(buf,ptr->value);
+            return (YES);
+        }
+    }
+    return (NO);
+} /* GET_VALUE */
+/* - - - - - - - - - */
+get_id_pairs(action,char_array)
+/*
+If action is YES, then put the ID pairs into the
+DEFINE_LIST. If NO, then put them into the
+char array CHAR_ARRAY and return.
+*/
+int action;
+char char_array[];
+{
+     char temp2[80];
+    if (token_type != VARIABLE && action == YES) {
+        err(WARNING,"ERROR 65 put a name here");
+        err_recovery(token_type,PUNCT_MARK,WHITE_SPACE);
+    }
+    if (action == YES) {
+        if (in_list(cond_list,icon) == YES || in_list(def_list,icon) == YES) {
+            err(WARNING,"ERROR 73-1 Label redefinition");
+            err_recovery(token_type,PUNCT_MARK,KEYWORD);
+        }
+    }
+    if ( action == YES ) {
+        strcpy(db_record.var_string,icon);
+        lex(icon);
+    }
+    if ( icon[0] != '=' ) {
+        err(WARNING,"ERROR 8 assign number/name with '=' sign");
+        err_recovery(token_type,VARIABLE,NUMBER);
+    }
+    lex(icon);
+    if (icon[0] == '(' ||
+         (token_type == VARIABLE || token_type == NUMBER)) {
+
+/* Pass the WARNING flag to CTRL_OUT_EXPR to warn users to put ','
+   between definitions; this is to support Ver 3.0 and 3.1 files which
+   allowed definitions without the ',' delimiter. The delimiter was
+   not necessary then because definitions took the form NAME = CONSTANT
+   only. Ver 3.32 files can now do NAME = LOGIC_EXPRESSION
+*/
+        ctrl_out_expression(WARNING);
+        lex(icon);
+        switch(icon[0]) {
+        case ',' : if (action == YES)
+                lex(icon);
+               break;
+        case ';' :
+        default  : if (action == NO)
+                get_new_token = NO;
+               break;
+        } /* SWITCH */
+        if (action == YES) {
+            strcpy(db_record.value,word.out);
+            strcat(db_record.value,"#b"); /* define a binary # */
+            strcpy(db_record.code,"%%%%");
+            db_record.flag1 = -1;
+            db_record.class_token = -1;
+            db_record.class_number = -1;
+            term_list_insert(def_list);
+            return;
+        }
+        if ( action == NO ) {
+            strcat(word.out,"#b");
+            if ( translate(word.out,temp2,outfield) == NO )
+                err(WARNING,DFLT_EXCD);
+            strcpy(char_array,temp2);
+            return;
+        }
+        } /* if icon = '(' */
+    if (token_type != VARIABLE && token_type != NUMBER) {
+        err(WARNING,"ERROR 96 use only predefined names or numbers");
+        err_recovery(token_type,PUNCT_MARK,VARIABLE);
+    }
+} /* GET_ID_PAIRS */
+/* - - - - - - - - - - */
+def_parse()
+{ char tempbuf[40];
+    fprintf(stderr,"\nProcessing Definitions");
+    for ( get_id_pairs(YES,tempbuf); ; get_id_pairs(YES,tempbuf) ) {
+        if (dotswitch == YES)
+            fprintf(stderr,".");
+        switch(icon[0]) {
+        case ';' : return;
+        case ',' : lex(icon);
+               break;
+        default  : break;
+        } /* SWITCH */
+    }
+} /* DEFINE_PARSE */
+/* - - - - - - - - - - - - - */
+out_dflt_parse()
+{
+    lex(icon);
+    get_id_pairs(NO,dflt_out);
+    lex(icon);
+    if ( icon[0] != ';' ) {
+        err(WARNING,"ERROR 64 put ';' here");
+        err_recovery(token_type,KEYWORD,VARIABLE);
+    }
+    lex(icon);
+} /* OUT_DFLT_PARSE */
+/* - - - - - - - - - - - - - - */
+set_output_polarity()
+{
+    lex(icon);
+    get_id_pairs(NO,output_polarity);
+    lex(icon);
+    if ( icon[0] != ';' ) {
+        err(WARNING,"ERROR 64 put ';' here");
+        err_recovery(token_type,KEYWORD,VARIABLE);
+    }
+    lex(icon);
+} /* SET_OUTPUT_POLARITY */
+/* - - - - - - - - - - - - - - */
+/* added 4/10/87 to handle architecture features on Am29PL142 */
+pars_architecture()
+{ struct com_string *lst_runner;
+  char temp_str[80];
+  int i;
+for (;;) {
+  lex(icon);
+  if (icon[0] == ';') {
+     lex(icon);
+     return;
+  }
+  if (token_type != VARIABLE && token_type != KEYWORD)
+    err(FATAL,"Need an architecture feature name");
+  for (lst_runner = arch_list;
+       lst_runner != NULL;
+       lst_runner = lst_runner->next_com_string) {
+    if (!strcmp(icon,lst_runner->var_string))
+       break;
+  } /* FOR */
+  if (lst_runner == NULL)
+     err(FATAL,"Unknown architecture feature");
+  lex(icon);
+  get_id_pairs(NO,temp_str);
+  i = atoi(temp_str);
+  switch(i) {
+  case 0 :
+  case 1 : lst_runner->class_number = i;
+       break;
+  default : err(WARNING,BIN_DEFAULT);
+        break;
+  } /* SWITCH */
+} /* FOR */
+} /* PARS_ARCHITECTURE */
+/* - - - - - - - - - - - - - - */
+item_parse()    /* parse the definition part of the file */
+{
+    char pmsg[40];
+    lex(icon);
+    if ( the_keyword == SSR ) {
+        if (use_ssr == NO)
+            err(NOTICE,"SSR fuse removed from JEDEC map by -S option");
+        if (ssr_available == 0) {
+            sprintf(pmsg,"SSR not available for [%s]",part_name);
+            err(NOTICE,pmsg);
+        }
+        ssr_parse();
+        lex(icon);
+    }
+    if ( the_keyword == DEFAULT ) {
+        default_parse();
+        lex(icon);
+    }
+    if ( the_keyword == DEFINE ) {
+        lex(icon);
+        def_parse();
+        lex(icon);
+    }
+    for (;;) {
+        switch(the_keyword) {
+        case OUTPUT_DEFAULT : out_dflt_parse();
+                      break;
+        case OUT_POLARITY   : set_output_polarity();
+                      break;
+        case TEST_CONDITION : pars_test();
+                      break;
+        case ARCHITECTURE   : pars_architecture();
+                      break;
+        case BEGIN        :
+        default            : get_new_token = NO;
+                      return;
+        } /* SWITCH */
+    } /* FOR */
+} /* ITEM_PARSE */
+/* - - - - - - - - */
+block_parse()    /* parse the body of the program */
+{
+    lex(icon);
+    if ( the_keyword != BEGIN ) {
+        err(WARNING,"ERROR 36 looking for keyword BEGIN");
+        err_recovery(token_type,VARIABLE,NUMBER);
+    }
+    lex(icon);
+    if ( the_keyword == END ) {
+        lex(icon);
+        if ( icon[0] != '.' )
+            err(WARNING,"ERROR 61 use '.' to terminate file");
+        return;
+    }
+    get_new_token = NO;
+    fprintf(stderr,"\nProcessing Statements");
+    while (1) {
+        if ( the_keyword == END )
+            break;
+        if (dotswitch == YES)
+            fprintf(stderr,".");
+        pars_statement();
+        lex(icon);
+        if ( the_keyword == END )
+            break;
+        else
+            get_new_token = NO;
+    } /* END WHILE */
+    lex(icon);
+    if ( icon[0] == '.' )
+        return;
+    else
+        err(WARNING,"ERROR 61 put '.' after END to terminate file");
+} /* BLOCK_PARSE */
+/* - - - - - - - - - - */
+pars_file() /* If the device name is valid, then assemble the file */
+{
+    get_line();
+    lex(icon);
+    if ( token_type == KEYWORD && the_keyword == DEVICE ) {
+        lex(icon);
+        if ( strcmp(icon,"(") ) {
+            err(WARNING,
+            "ERROR 21 enclose device name in parenthesis");
+            err_recovery(token_type,VARIABLE,PUNCT_MARK);
+        }
+        if ( pars_name() == VALID ) {
+            lex(icon);
+            if ( icon[0] != ')' ) {
+                err(WARNING,"ERROR 31 looking for ')'");
+                err_recovery(token_type,KEYWORD,PUNCT_MARK);
+            }
+        }
+        else
+            err(FATAL,
+            "ERROR 6 assembler needs valid device name");
+    }
+    else {
+        err(WARNING,"ERROR 38 looking for keyword DEVICE");
+        err_recovery(token_type,PUNCT_MARK,WHITE_SPACE);
+    }
+    item_parse();
+    block_parse();
+    undefined_labels_check();
+} /* PARS_FILE */
+/* - - - - - - - */
+mem_check(pt1,pt2,pt3,msg_string)
+struct com_string *pt1;
+struct word_record *pt2;
+struct stk_form *pt3;
+char msg_string[];
+{
+if (pt1 == NULL && pt2 == NULL && pt3 == NULL) {
+  fprintf(stderr,"\n[%s] No memory for Line [%d]\n[%s]",
+        msg_string,line_number,sorce_line);
+  exit(1);
+}
+} /* MEM_CHECK */
+/* - - - - - - - */
+initialize_lists()
+{
+    the_stack = NULL;
+    operator_stk = NULL;
+    entre = (struct com_string *) malloc (sizeof(struct com_string));
+    mem_check(entre,NULL,NULL,"entre");
+    strcpy( entre->var_string , "%%%%" );
+    strcpy( entre->code     , "%%%%" );
+    strcpy( entre->value      , "%%%%" );
+    entre->flag1 = -1;
+    entre->class_token = -1;
+    entre->class_number = -1;
+    entre->next_com_string = NULL;
+    cond_list = entre;
+    entre = (struct com_string *)malloc(sizeof(struct com_string));
+    mem_check(entre,NULL,NULL,"entre");
+    strcpy( entre->var_string , "%%%%" );
+    strcpy( entre->code     , "%%%%" );
+    strcpy( entre->value      , "%%%%" );
+    entre->flag1 = -1;
+    entre->class_token = -1;
+    entre->class_number = -1;
+    entre->next_com_string = NULL;
+    com_list = entre;
+    entre = (struct com_string *)malloc(sizeof(struct com_string));
+    mem_check(entre,NULL,NULL,"entre");
+    strcpy( entre->var_string , "%%%%" );
+    strcpy( entre->code     , "%%%%" );
+    strcpy( entre->value      , "%%%%" );
+    entre->flag1 = -1;
+    entre->class_token = -1;
+    entre->class_number = -1;
+    entre->next_com_string = NULL;
+    def_list = entre;
+    entre = (struct com_string *)malloc(sizeof(struct com_string));
+    mem_check(entre,NULL,NULL,"entre");
+    strcpy( entre->var_string , "%%%%" );
+    strcpy( entre->code     , "%%%%" );
+    strcpy( entre->value      , "%%%%" );
+    entre->flag1 = -1;
+    entre->class_token = -1;
+    entre->class_number = -1;
+    entre->next_com_string = NULL;
+    lab_list = entre;
+    word_list = NULL;
+    lab_undefined = NULL;
+    arch_list = NULL;
+} /* INITIALIZE_LISTS */
+/* - - - - - - - - - - */
+main(argc,argv)
+int argc;
+char *argv[];
+{
+    end_found = NO;
+    line_number = 0;
+    errors = 0;
+    cond_errors = 0;
+    fuse_default = '1';
+/* all unspecified fuses default to '1' or unblown */
+    ssr_default = '0';
+    get_new_token = YES;
+    fprintf(stderr,"\nAm29PL14X Assembler version 3.32 July 1987\n");
+    symtab = NO;
+    pl131_to_141 = NO;
+    pc = 0;    /* program counter starts at 0 */
+    end_of_file = NO;
+    dflt_out[0] = '\0'; /* default control output unspecified */
+    output_polarity[0] = '\0';
+    dflt_present = NO;
+    got_one = NO;   /* got a default test condition is not yet true */
+    get_file_name(argc,argv);
+    fprintf(stderr,"\nAssembling");
+    initialize_lists();
+    pars_file();
+    if ( errors == 0 && cond_errors == 0 ) {
+        fprintf(stderr,"\nNo errors");
+        fprintf(stderr,"\nGenerating fuse map\n");
+        generate_code();
+    }
+    else {
+        fprintf(stderr,"\nStatement errors     : %d",errors);
+        fprintf(stderr,"\nTest condition errors: %d",cond_errors);
+        fprintf(stderr,"\nNo fuse map generated\n");
+    }
+    if ( input_file != NULL ) {
+        fclose(input_file);
+        input_file = NULL;
+    }
+    if ( out_fp != NULL ) {
+        fclose(out_fp);
+        out_fp = NULL;
+    }
+    if ( bitfile != NULL ) {
+        fclose(bitfile);
+        bitfile = NULL;
+    }
+    if ( err_file != NULL ) {
+        fclose(err_file);
+        err_file = NULL;
+    }
+    cln_the_list(cond_list);
+    cond_list = NULL;
+    cln_the_list(def_list);
+    def_list = NULL;
+    cln_the_list(com_list);
+    com_list = NULL;
+    cln_the_list(arch_list);
+    arch_list = NULL;
+    exit (0);
+} /* MAIN */
+/* - - - - - - - - */
+SHAR_EOF
+cat << \SHAR_EOF > lexi14x.c
+/* File LEXI14X.C version 3.32 June 28, 1987 for Am29PL14X Assembler */
+#include "data.h"
+/* - - - - - - - */
+/*
+History: (8-21-86) Created to check if a file exists. If it does, query
+         user if file should be overwritten: if Yes, then use "w" when
+         using FOPEN(), else exit(1).
+*/
+FILE *exist(ename)
+char *ename;
+{
+    FILE *ptr;
+    char answer;
+
+    ptr = fopen(ename,"r");
+    if (ptr == NULL) {            /* File does not exist */
+        ptr = fopen(ename,"w");        /* Create it */
+        if (ptr == NULL) {
+            file_error(ename);
+            exit(1);
+        }
+        return(ptr);
+    }
+    fprintf(stderr,
+"\n[%s] exists.\nOverwrite, Create new file, Exit (o/c/e)? ",ename);
+    answer = getchar();
+    answer = toupper(answer);
+    getchar();  /* get the <LF> */
+    fclose(ptr);
+    switch(answer) {
+    case 'O': ptr = fopen(ename,"w");    /* Overwrite the file */
+          if (ptr == NULL) {
+            file_error(ename);
+            exit(1);
+          }
+          return (ptr);
+    case 'C': fprintf (stderr,"\nNew file name: ");
+          scanf ("%s", ename);
+          return (exist (ename));    /* Call recursively */
+    default : exit (1);
+    } /* SWITCH */
+} /* EXIST */
+/* - - - - - - - - */
+get_file_name (argc, argv)
+int argc;
+char *argv[];
+{
+    char *ch,bits[40],symbol_table[40],an_err_file[40];
+
+    debug_flag = NO;
+    input_file = NULL;
+    out_fp = NULL;
+    bitfile = NULL;
+    err_file = NULL;
+    use_ssr = YES;
+    dotswitch = NO;
+    while (--argc > 0 && (*++argv)[0] == '-') {
+        for (ch = argv[0] + 1; *ch != '\0'; ch++) {
+            if (islower(*ch))
+                *ch = toupper(*ch);
+            switch (*ch) {
+            case 'I' :
+                argc--;
+                if (argc > 0) {
+                    input_file = fopen(*++argv,"r");
+                    file_name = *argv;
+                    if (input_file == NULL) {
+                        file_error(file_name);
+                        exit(1);
+                    }
+                }
+                else {
+                    fprintf(stderr,
+"ERROR 39 missing input filename\n");
+                    exit(1);
+                }
+                break;
+            case 'O' :
+                argc--;
+                if (argc > 0) {
+                    strcpy(fuse_file ,*++argv);
+                    out_fp = exist(fuse_file);
+                }
+                else {
+                    fprintf(stderr,
+"ERROR 40 missing fusemap filename\n");
+                    exit(1);
+                }
+                break;
+            case 'E' :
+                argc--;
+                if (argc > 0) {
+                    strcpy(an_err_file,*++argv);
+                    err_file = exist(an_err_file);
+
+                }
+                else {
+                    fprintf(stderr,
+"ERROR 47 missing error filename\n");
+                    exit(1);
+                }
+                break;
+            case 'B' :
+                debug_flag = YES;
+                argc--;
+                if (argc > 0) {
+                    strcpy(bits,*++argv);
+                    bitfile = exist(bits);
+                }
+                else {
+                    fprintf(stderr,
+"ERROR 39 missing bit filename\n");
+                    exit(1);
+                }
+                break;
+            case 'T' :
+                symtab = YES;
+                argc--;
+                if (argc > 0) {
+                    strcpy(symbol_table,*++argv);
+                    table_file = exist(symbol_table);
+                }
+                else {
+                    fprintf(stderr,
+"ERROR 39 missing symbol table filename\n");
+                    exit(1);
+                }
+                break;
+            case 'S' : use_ssr = NO;
+                   break;
+            case 'D' : dotswitch = YES;
+                   break;
+/* May 26, 1987
+This option was designed to make the ASM14X program produce a PL141-sized
+JEDEC fuse map for the Am29PL131 device. The PL131 is a 28-bit wide device;
+this option would have added four more MSBs to match the 32-bit wide word
+length of the PL141. The padded data (0011) would look like 0011 in the
+JEDEC map. Rajesh Tanna (AMD Applications) informs me that
+DATA I/O will be able to program a regular Am29PL131 device without
+any special JEDEC file manipulations. Just in case this
+feature is needed, just remove the C comment quotes and recompile.
+            case 'M' : pl131_to_141 = YES;
+                   break;
+*/
+            default  :
+                fprintf(stderr,
+                    "ASM14X: invalid option %c\n",*ch);
+                exit(1);
+                break;
+            } /* SWITCH */
+        } /* FOR */
+    } /* WHILE */
+    if ( input_file == NULL ) {
+        fprintf(stderr,"asm14x usage:\n");
+        fprintf(stderr,"asm14x -i <input file>\n");
+        fprintf(stderr,"options: -o <output file>\n");
+        fprintf(stderr,"         -t <symbol table file>\n");
+        fprintf(stderr,"         -e <error file>\n");
+        fprintf(stderr,"         -b <PROM bit file>\n");
+        fprintf(stderr,"         -s (remove SSR fuse)\n");
+        fprintf(stderr,"         -d (print dots as program is running)\n");
+        exit(0);
+    }
+} /* GET_FILE_NAME */
+/* - - - - - - - - */
+file_error (file)
+char *file;
+{
+fprintf(stderr,"\nERROR 1 29PL14X Assembler: cannot open %s\n", file);
+}
+/* - - - - - - - - */
+get_line()
+{
+    int i;
+    int lexi_char;
+    ++line_number;
+    for (i = 0, lexi_char = fgetc(input_file);
+        i < 256 && lexi_char != '\n' && lexi_char != '\r'
+            && lexi_char != EOF;
+        ++i, lexi_char = fgetc(input_file))
+        sorce_line[i] = lexi_char;
+    sorce_line[i] = '\0';
+    if ( lexi_char == EOF )
+        end_of_file = YES;
+    screen_position = 0;
+    lexi_i = 0;
+} /* GET_NEW_LINE */
+/* - - - - - - - - - - - */
+char get_char(action)  /* return a character */
+int action;
+{
+    if ((end_of_file == YES) && (lexi_i >= strlen(sorce_line) + 1))
+        if ( action == 0 && last_token[0] != '"' ) {
+            fprintf(stderr,EOF_MSG);
+            exit(1);
+        }
+        else
+            return(END_FILE);
+    if ( lexi_i >= strlen(sorce_line) + 1 ) {
+        get_line();
+        return(' ');
+    }
+    if (sorce_line[lexi_i] == '\0') {
+        ++lexi_i;
+        return(' ');
+    }
+    return(sorce_line[lexi_i++]);
+} /* GET_CHAR */
+/* - - - - - - - - - - - - */
+chck_validity(valid_digits,comparand)
+char valid_digits[];
+char comparand[];
+{
+    int i,j,flag_1;
+
+    if (strlen(comparand) == 1)
+        flag_1 = 0;
+    else
+        flag_1 = 1;
+    for ( i = 0; i != strlen(comparand) - flag_1; ++i ) {
+        for ( j = 0; j != strlen(valid_digits); ++j ) {
+            if ( comparand[i] == valid_digits[j] )
+                break;
+        }
+        if (j == strlen(valid_digits) )
+            return(NO);
+    }
+    return(YES);
+} /* CHECK_VALIDITY */
+/* - - - - - - - - - - */
+work_on_number(a_number)
+char a_number[];
+{
+    token_type = NUMBER;
+    num_type = NO_BASE;
+    switch ( a_number[strlen(a_number) - 1 ] ) {
+    case 'b' :
+    case 'B' :
+        if (chck_validity("01#",a_number) == YES)
+            num_type = BINARY;
+        else
+            err(WARNING,"ERROR 81 not a binary number");
+        break;
+    case 'o' :
+    case 'O' :
+        if (chck_validity("01234567#",a_number) == YES)
+            num_type = OCTAL;
+        else
+            err(WARNING,"ERROR 85 not an octal number");
+        break;
+    case 'd' :
+    case 'D' :
+        if (chck_validity("0123456789#",a_number) == YES)
+            num_type = DECIMAL;
+        else
+            err(WARNING,"ERROR 82 not a decimal number");
+        break;
+    case 'h' :
+    case 'H' :
+        if ( chck_validity("0123456789abcdefABCDEF#",a_number) == YES)
+            num_type = HEXADECIMAL;
+        else
+            err(WARNING,"ERROR 84 not a hexadecimal number");
+        break;
+    default  :
+        fprintf(stderr,"\n[%c]",a_number[strlen(a_number) - 1]);
+        fprintf(stderr," invalid number base");
+        break;
+    } /* SWITCH on last character in number array */
+} /* PROCESS_THIS_NUMBER */
+/* - - - - - - - - */
+num_parse(a_number)
+char a_number;
+{
+    int i;
+    int a_char,radix;
+
+    token[0] = a_number;
+    the_keyword = NOT_A_KEYWORD;
+    a_char = get_char(0);
+    for (i = 1,radix = NO;
+             (!(isspace(a_char)) && !(ispunct(a_char)))
+        || a_char == '#' && i < 256; ++i, a_char = get_char(0)) {
+        token[i] = a_char;
+        if (radix == YES) {
+            ++i;
+            break;
+        }
+        if (a_char == '#')
+            radix = YES;
+    } /* FOR */
+    if ( i >= 256 ) {
+        err(WARNING,"ERROR 10 beyond range of machine");
+        while ( (a_char = get_char(0) ) != END_FILE ) {
+            if ( isspace(a_char) )
+                break;
+        }
+    }
+    token[i] = '\0';
+    if ( isspace(a_char) || ispunct(a_char) )
+        --lexi_i;
+    token_type = NUMBER;
+    num_type = NOT_A_NUMBER;
+    if (radix == YES) {
+        switch (token[strlen(token) - 1] ) {
+        case 'b' :
+        case 'B' :
+        case 'o' :
+        case 'O' :
+        case 'd' :
+        case 'D' :
+        case 'h' :
+        case 'H' : break;
+        default  : err(FATAL,"ERROR 82 not a decimal number");
+        } /* SWITCH */
+    } /* IF */
+    else
+        strcat(token,"#d");
+    if (token[strlen(token) - 2] != '#')
+        err(WARNING,"WARNING -> put [#]");
+    else
+        work_on_number(token);
+} /* NUMBER_PARSE */
+/* - - - - - - - - - - - - */
+comments()
+{
+    int line;
+
+    line = line_number;
+    for (character = get_char(0); character != END_FILE && character != '"';
+         character = get_char(0))
+        ;
+    if ( character == END_FILE ) {
+        if ( end_found == NO )
+            fprintf(stderr,EOF_MSG);
+        fprintf(stderr," (close comments in line %d)",line);
+        exit(1);
+    }
+} /* COMMENTS */
+/* - - - - - - - - - - - */
+chck_keyword(thing_to_check)    /* check if this is a keyword */
+char thing_to_check[];
+{
+    char temp[80];
+    int i;
+
+    the_keyword = NOT_A_KEYWORD;
+    for ( i = 0; i != strlen(thing_to_check); ++i ) {
+        if ( isupper(thing_to_check[i]) )
+            temp[i] = tolower(thing_to_check[i]);
+        else
+            temp[i] = thing_to_check[i];
+    }
+    temp[i] = '\0';
+    if ( !strcmp(temp,"device") ) {
+        the_keyword = DEVICE;
+        return(YES);
+    }
+    if ( !strcmp(temp,"default") ) {
+        the_keyword = DEFAULT;
+        return(YES);
+    }
+    if ( !strcmp(temp,"ssr") ) {
+        the_keyword = SSR;
+        return(YES);
+    }
+    if ( !strcmp(temp,"disable") ) {
+        the_keyword = DISABLE;
+        return(YES);
+    }
+    if ( !strcmp(temp,"enable") ) {
+        the_keyword = ENABLE;
+        return(YES);
+    }
+    if ( !strcmp(temp,"define") ) {
+        the_keyword = DEFINE;
+        return(YES);
+    }
+    if ( !strcmp(temp,"test_condition") ) {
+        the_keyword = TEST_CONDITION;
+        return(YES);
+    }
+    if ( !strcmp(temp,"begin") ) {
+        the_keyword = BEGIN;
+        return(YES);
+    }
+    if ( !strcmp(temp,"end") ) {
+        the_keyword = END;
+        return(YES);
+    }
+    if ( !strcmp(temp,"oe") ) {
+        the_keyword = OE;
+        return(YES);
+    }
+    if ( !strcmp(temp,"od") ) {
+        the_keyword = OD;
+        return(YES);
+    }
+    if ( !strcmp(temp,"if") ) {
+        the_keyword = IF;
+        return(YES);
+    }
+    if ( !strcmp(temp,"then") ) {
+        the_keyword = THEN;
+        return(YES);
+    }
+    if ( !strcmp(temp,"else") ) {
+        the_keyword = ELSE;
+        return(YES);
+    }
+    if ( !strcmp(temp,"continue") ) {
+        the_keyword = CONTINUE;
+        return(YES);
+    }
+    if ( !strcmp(temp,"cmp") ) {
+        the_keyword = CMP;
+        return(YES);
+    }
+    if ( !strcmp(temp,"tm") ) {
+        the_keyword = TM;
+        return(YES);
+    }
+    if ( !strcmp(temp,"to") ) {
+        the_keyword = TO;
+        return(YES);
+    }
+    if ( !strcmp(temp,"pl") ) {
+        the_keyword = PL;
+        return(YES);
+    }
+    if ( !strcmp(temp,"ret") ) {
+        the_keyword = RET;
+        return(YES);
+    }
+    if ( !strcmp(temp,"load") ) {
+        the_keyword = LOAD;
+        return(YES);
+    }
+    if ( !strcmp(temp,"goto") ) {
+        the_keyword = GOTO;
+        return(YES);
+    }
+    if ( !strcmp(temp,"push") ) {
+        the_keyword = PUSH;
+        return(YES);
+    }
+    if ( !strcmp(temp,"dec") ) {
+        the_keyword = DEC;
+        return(YES);
+    }
+    if ( !strcmp(temp,"wait") ) {
+        the_keyword = WAIT;
+        return(YES);
+    }
+    if ( !strcmp(temp,"nest") ) {
+        the_keyword = NEST;
+        return(YES);
+    }
+    if ( !strcmp(temp,"nested") ) {
+        the_keyword = NESTED;
+        return(YES);
+    }
+    if ( !strcmp(temp,"sreg") ) {
+        the_keyword = SREG;
+        return(YES);
+    }
+    if ( !strcmp(temp,"creg") ) {
+        the_keyword = CREG;
+        return(YES);
+    }
+    if ( !strcmp(temp,"while") ) {
+        the_keyword = WHILE;
+        return(YES);
+    }
+    if ( !strcmp(temp,"not") ) {
+        the_keyword = NOT;
+        return(YES);
+    }
+    if ( !strcmp(temp,"call") ) {
+        the_keyword = CALL;
+        return(YES);
+    }
+    if ( !strcmp(temp,"loop") ) {
+        the_keyword = LOOP;
+        return(YES);
+    }
+    if ( !strcmp(temp,"default_output") ) {
+        the_keyword = OUTPUT_DEFAULT;
+        return(YES);
+    }
+    if ( !strcmp(temp,"output") ) {
+        the_keyword = OUTPUT;
+        return(YES);
+    }
+    if ( !strcmp(temp,"pop") ) {
+        the_keyword = POP;
+        return(YES);
+    }
+    if ( !strcmp(temp,"stack") ) {
+        the_keyword = STACK;
+        return(YES);
+    }
+/* added 3/5/87 to support OUTPUT POLARITY as suggested by Philip Freidin */
+    if ( !strcmp(temp,"out_polarity") ) {
+        the_keyword = OUT_POLARITY;
+        return(YES);
+    }
+    if ( !strcmp(temp,"architecture") ) {
+        the_keyword = ARCHITECTURE;
+        return(YES);
+    }
+    return(NO);
+} /* CHECK_KEYWORD */
+/* - - - - - - - */
+lexi()
+{
+    int i;
+
+    while ( ( character = get_char(1) ) != END_FILE ) {
+        if ( isdigit(character) ) {
+            screen_position = lexi_i;
+            num_parse(character);
+            return;
+        }
+        if ( isalnum(character) || character == '_' ) {
+/* read an alphanumeric token */
+            for (i = 0, screen_position = lexi_i;
+(isalnum(character) || character == '_' || character == '#')
+&& character != END_FILE && i <= 29; ++i, character = get_char(0))
+
+                token[i] = character;
+            if ( i >= 29 ) {
+                err(WARNING,"name exceeds 29 characters");
+                while ( ( character = get_char(0) ) != END_FILE ) {
+                    if ( isspace(character) )
+                        break;
+                }
+            }
+            token[i] = '\0';
+            if (!((isalnum(character) || character == '_' ||
+                    character == '#') && character == END_FILE ))
+
+                --lexi_i;
+            if ( token[strlen(token) - 2] == '#' )
+                work_on_number(token);
+            else {
+                if (chck_keyword(token) == YES)
+                    token_type = KEYWORD;
+                else
+                    token_type = VARIABLE;
+                num_type = NOT_A_NUMBER;
+            }
+            return;
+        } /* IF is an alphanumeric character */
+        if ( ispunct(character) ) {
+            token_type = PUNCT_MARK;
+            the_keyword = NOT_A_KEYWORD;
+            num_type = NOT_A_NUMBER;
+            switch(character) {
+            case '.' :
+                strcpy(token,".");
+                if (!strcmp(last_token,"end"))
+                    token_type = THE_END;
+                else
+                    token_type = PUNCT_MARK;
+                screen_position = lexi_i;
+                return;
+            case ' ' :
+                token_type = WHITE_SPACE;
+                token[0] = '\0';
+                return;
+            case '"' :
+                last_token[0] = '"';
+                last_token[1] = '\0';
+                comments();
+                token[0] = '\0';
+                token_type = WHITE_SPACE;
+                return;
+            default  :
+                screen_position = lexi_i;
+                break;
+            } /* SWITCH */
+            token[0] = character;
+            token[1] = '\0';
+            return;
+        } /* IF is punctuation */
+        if ( isspace(character) ) {
+            switch (character) {
+            case '\n' :
+            case '\r' :
+                screen_position = 0;
+                break;
+            case '\t' :
+            default      :
+                break;
+            } /* SWITCH on character */
+            token[0] = ' ';
+            token[1] = '\0';
+            the_keyword = NOT_A_KEYWORD;
+            token_type = WHITE_SPACE;
+            num_type = NOT_A_NUMBER;
+            return;
+        }
+    } /* WHILE character != EOF */
+    strcpy(token,END_STRING);
+    if ( end_found != YES ) {
+        fprintf(stderr,EOF_MSG);
+        exit(1);
+    }
+} /* LEXI */
+/* - - - - - - - - - - - - */
+get_token(item)
+char item[];
+{
+    int i;
+    for ( lexi(); strcmp(token,END_STRING); lexi()  ) {
+        if ( token[0] != ' ' && token[0] != '\0' ) {
+            for ( i = 0; i != strlen(token); ++i ) {
+                if ( isupper(token[i]) )
+                    item[i] = tolower(token[i]);
+                else
+                    item[i] = token[i];
+            }
+            item[strlen(token)] = '\0';
+            if ( !strcmp(last_token,"end") && token[0] == '.' )
+                end_found = YES;
+            strcpy(last_token,item);
+            return (NULL);
+        }
+    }
+    if (!strcmp(token,END_STRING))
+        return (END_FILE);
+    strcpy(item,token);
+    return (NULL);
+} /* GET_TOKEN */
+/* - - - - - - - - - */
+SHAR_EOF
+cat << \SHAR_EOF > pl131.
+# Am29pl131 version 3.32 June 1987 #
+# For Am29PL14X assembler #
+# Database entry for Am29PL131 #
+
+# PROM limits #
+@ 64 0 3 6 12 28 0
++ 0 0 0
+# available conditions #
+@ t0      = 0
+@ t1      = 1
+@ t2      = 2
+@ t3      = 3
+@ t4      = 4
+@ t5      = 5
+@ cc      = 6
+@ eq      = 7
+@ creg    = -1
+
+*
+# opcode / high level statement definitions #
+
+* GOTOPLZ 0b : _if_(_COND1_)_then_goto_pl_(_data_)
+* GOTOTM  0f : _if_(_COND3_)_then_goto_tm_(_data_)
+* GOTOPL  19 : _if_(_COND3_)_then_goto_pl_(_data_)
+* FORK    18 : _if_(_COND3_)_then_goto_pl_(_data_)_else_goto_(STACK)
+* CALPL   1c : _if_(_COND3_)_then_call_pl_(_data_)
+* CALPLN  1d : _if_(_COND3_)_then_call_pl_(_data_)_,_nested
+* CALTM   1e : _if_(_COND3_)_then_call_tm_(_data_)
+* CALTMN  1f : _if_(_COND3_)_then_call_tm_(_data_)_,_nested
+
+* GOTOPLZ 0b : _if_(_COND1_)_then_goto_pl_(_data_)_CLREQ
+
+* LDPL    04 : _if_(_COND3_)_then_load_pl_(_data_)
+* LDPLN   05 : _if_(_COND3_)_then_load_pl_(_data_)_,_nested
+* LDTM    06 : _if_(_COND3_)_then_load_tm_(_data_)
+* LDTMN   07 : _if_(_COND3_)_then_load_tm_(_data_)_,_nested
+* PSH     15 : _if_(_COND3_)_then_push
+* PSHN    17 : _if_(_COND3_)_then_push_,_nested
+* PSHPL   14 : _if_(_COND3_)_then_push_,_load_pl_(_data_)
+* PSHTM   16 : _if_(_COND3_)_then_push_,_load_tm_(_data_)
+* RET     02 : _if_(_COND3_)_then_ret
+* RETN    03 : _if_(_COND3_)_then_ret_,_nested
+* RETPL   00 : _if_(_COND3_)_then_ret_,_load_pl_(_data_)
+* RETPLN  01 : _if_(_COND3_)_then_ret_nested_,_load_pl_(_data_)
+* DEC     09 : _if_(_COND3_)_then_dec
+* DECPL   0c : _while_(_COND2_)_wait_else_load_pl_(_data_)
+* DECTM   0e : _while_(_COND2_)_wait_else_load_tm_(_data_)
+* DECGOPL 1b : _if_(_COND3_)_then_goto_pl_(_data_)_else_while_(_COND2_)_wait
+* WAIT    1a : _if_(_COND3_)_then_goto_pl_(_data_)_else_wait
+* LPPL    08 : _while_(_COND2_)_loop_to_pl_(_data_)
+* LPPLN   0a : _while_(_COND2_)_loop_to_pl_(_data_)_else_nest
+* CONT    0d : _continue
+* CMP     4  : _cmp_tm_(_data_)_to_pl_(_data_)
+
+* LPPL    08 : _while_(_COND2_)_loop_to_pl_(_data_)_CLREQ
+* LPPLN   0a : _while_(_COND2_)_loop_to_pl_(_data_)_CLREQ_else_nest
+SHAR_EOF
+cat << \SHAR_EOF > pl141.
+# For Am29PL141 version 3.32 June 1987 #
+# For Am29PL14X assembler #
+# Database entry for Am29PL141 #
+
+# PROM limits #
+@ 64 0 3 6 16 32 1
++ SSR 2048 0
++ 0 0 0
+# available conditions #
+@ t0      = 0
+@ t1      = 1
+@ t2      = 2
+@ t3      = 3
+@ t4      = 4
+@ t5      = 5
+@ cc      = 6
+@ eq      = 7
+@ creg    = -1
+
+*
+# opcode / high level statement definitions #
+
+* GOTOPLZ 0b : _if_(_COND1_)_then_goto_pl_(_data_)
+* GOTOTM  0f : _if_(_COND3_)_then_goto_tm_(_data_)
+* GOTOPL  19 : _if_(_COND3_)_then_goto_pl_(_data_)
+* FORK    18 : _if_(_COND3_)_then_goto_pl_(_data_)_else_goto_(STACK)
+* CALPL   1c : _if_(_COND3_)_then_call_pl_(_data_)
+* CALPLN  1d : _if_(_COND3_)_then_call_pl_(_data_)_,_nested
+* CALTM   1e : _if_(_COND3_)_then_call_tm_(_data_)
+* CALTMN  1f : _if_(_COND3_)_then_call_tm_(_data_)_,_nested
+
+* GOTOPLZ 0b : _if_(_COND1_)_then_goto_pl_(_data_)_CLREQ
+
+* LDPL    04 : _if_(_COND3_)_then_load_pl_(_data_)
+* LDPLN   05 : _if_(_COND3_)_then_load_pl_(_data_)_,_nested
+* LDTM    06 : _if_(_COND3_)_then_load_tm_(_data_)
+* LDTMN   07 : _if_(_COND3_)_then_load_tm_(_data_)_,_nested
+* PSH     15 : _if_(_COND3_)_then_push
+* PSHN    17 : _if_(_COND3_)_then_push_,_nested
+* PSHPL   14 : _if_(_COND3_)_then_push_,_load_pl_(_data_)
+* PSHTM   16 : _if_(_COND3_)_then_push_,_load_tm_(_data_)
+* RET     02 : _if_(_COND3_)_then_ret
+* RETN    03 : _if_(_COND3_)_then_ret_,_nested
+* RETPL   00 : _if_(_COND3_)_then_ret_,_load_pl_(_data_)
+* RETPLN  01 : _if_(_COND3_)_then_ret_nested_,_load_pl_(_data_)
+* DEC     09 : _if_(_COND3_)_then_dec
+* DECPL   0c : _while_(_COND2_)_wait_else_load_pl_(_data_)
+* DECTM   0e : _while_(_COND2_)_wait_else_load_tm_(_data_)
+* DECGOPL 1b : _if_(_COND3_)_then_goto_pl_(_data_)_else_while_(_COND2_)_wait
+* WAIT    1a : _if_(_COND3_)_then_goto_pl_(_data_)_else_wait
+* LPPL    08 : _while_(_COND2_)_loop_to_pl_(_data_)
+* LPPLN   0a : _while_(_COND2_)_loop_to_pl_(_data_)_else_nest
+* CONT    0d : _continue
+* CMP     4  : _cmp_tm_(_data_)_to_pl_(_data_)
+
+* LPPL    08 : _while_(_COND2_)_loop_to_pl_(_data_)_CLREQ
+* LPPLN   0a : _while_(_COND2_)_loop_to_pl_(_data_)_CLREQ_else_nest
+SHAR_EOF
+cat << \SHAR_EOF > pl142.
+# For Am29PL142 version 3.32 June 1987 #
+# For Am29PL14X assembler #
+# Database entry for Am29PL142 #
+
+# <PROM limit><dev_creg_cond><test field><data field>#
+#    <out field><u-instruction width><SSR available>#
+@ 128 1 4 7 16 34 1
++ SSR 4352 0
++ EXPAND 4353 0
++ 0 0 0
+# available conditions #
+@ t0 = 0
+@ t1 = 1
+@ t2 = 2
+@ t3 = 3
+@ t4 = 4
+@ t5 = 5
+@ t6 = 6
+@ cc = 7
+@ eq = 8
+@ creg = 9
+@ pass_dflt = 15
+
+*
+# opcode/high level statement definitions #
+
+* GOTOSTK 03 : _if_(_COND3_)_then_goto_(STACK)
+* GOTOPL  19 : _if_(_COND3_)_then_goto_pl_(_data_)
+* GOTOTM  1f : _if_(_COND3_)_then_goto_tm_(_data_)
+* FORK    18 : _if_(_COND3_)_then_goto_pl_(_data_)_else_goto_(STACK)
+* CALPL   1c : _if_(_COND3_)_then_call_pl_(_data_)
+* CALTM   1e : _if_(_COND3_)_then_call_tm_(_data_)
+
+* LDPL    04 : _if_(_COND3_)_then_load_pl_(_data_)
+* LDTM    06 : _if_(_COND3_)_then_load_tm_(_data_)
+* PSH     15 : _if_(_COND3_)_then_push
+* PSHPL   14 : _if_(_COND3_)_then_push_,_load_pl_(_data_)
+* PSHTM   16 : _if_(_COND3_)_then_push_,_load_tm_(_data_)
+* PSHCNTR 05 : _if_(_COND3_)_then_push_(CREG)
+* RET     02 : _if_(_COND3_)_then_ret
+* RETPL   00 : _if_(_COND3_)_then_ret_,_load_pl_(_data_)
+* DEC     0b : _if_(_COND3_)_then_dec
+* DECPL   0c : _while_(_COND2_)_wait_else_load_pl_(_data_)
+* DECTM   0e : _while_(_COND2_)_wait_else_load_tm_(_data_)
+* DECGOPL 1d : _if_(_COND3_)_then_goto_pl_(_data_)_else_while_(_COND2_)_wait
+* WAITPL  1a : _if_(_COND3_)_then_goto_pl_(_data_)_else_wait
+* WAITTM  1b : _if_(_COND3_)_then_goto_tm_(_data_)_else_wait
+* LPPL    08 : _while_(_COND2_)_loop_to_pl_(_data_)
+* LPTM    0a : _while_(_COND2_)_loop_to_tm_(_data_)
+* LPSTK   0f : _while_(_COND2_)_loop_to_(STACK)
+* CONT    0d : _continue
+
+* LPPL    08 : _while_(_COND2_)_loop_to_pl_(_data_)_CLREQ
+* LPTM    0a : _while_(_COND2_)_loop_to_tm_(_data_)_CLREQ
+* LPSTK   0f : _while_(_COND2_)_loop_to_(STACK)_CLREQ
+* CONT    0d : _continue_CLREQ
+
+* CMP     4  : _cmp_tm_(_data_)_to_pl_(_data_)
+* OUTPUT  01 : _if_(_COND3_)_then_output
+* POP     07 : _if_(_COND3_)_then_pop
+* POPCNTR 17 : _if_(_COND3_)_then_pop_to_(CREG)
+SHAR_EOF
+cat << \SHAR_EOF > stat14x.c
+/* File STAT14X.C version 3.32 June 28, 1987 for Am29PL14X Assembler */
+#include "data.h"
+/*  -  -  -  -  -  -  -  */
+put_in_command_line(a_string)
+char a_string[];
+{
+    char item[80];
+    item[0] = '_';
+    item[1] = '\0';
+    strcat(item,a_string);
+    strcat(command_line,item);
+} /* PUT_IN_COMMAND_LINE */
+/*  -  -  -  -  -  -  -  */
+lex(jea)        /* lex gets a token */
+char jea[];
+{
+    if ( get_new_token == YES ) {
+        if ( get_token(jea) == END_FILE ) {
+            fprintf(stderr,EOF_MSG);
+            exit(1);
+        }
+    }
+    else
+        get_new_token = YES;
+} /* LEX */
+/* -  -  -  -  -  -  -  */
+err_recovery(got_this,must1,must2)
+/*
+rudimentary error recovery whereby the token_type obtained (GOT_THIS) is
+compared with the next item to be taken. If GOT_THIS is the same type as
+MUST1 or MUST2, then use the same token next time by doing GET_NEW_TOKEN
+to NO. If not, then just return
+*/
+int got_this , must1 , must2;
+{
+    if ( got_this == must1 || got_this == must2 ) {
+        get_new_token = NO;
+    }
+} /* ERR_RECOVERY */
+/* -  -  -  -  -  -  -  -  */
+action_parse()
+{
+    lex(icon);
+    switch(the_keyword) {
+    case RET    :
+    case LOAD   :
+    case GOTO   :
+    case PUSH   :
+    case DEC    :
+    case CALL   :
+    case WAIT   :
+        case POP    :
+    case CONTINUE:
+        case OUTPUT :
+    case NESTED :
+    case NEST   :
+        put_in_command_line(icon);
+                if (the_keyword == POP)
+            get_to_item(POP);
+        return;
+    default     :
+        err(WARNING,"ERROR 45 put opcode here");
+        err_recovery(token_type,KEYWORD,PUNCT_MARK);
+        break;
+    } /* SWITCH */
+} /* ACTION_PARSE */
+/* -  -  -  -  -  -  -  -  */
+qualifier_parse()
+{
+    lex(icon);
+    switch(the_keyword) {
+    case NESTED :
+    case NEST   :
+        put_in_command_line(icon);
+        return;
+    default     :
+        get_new_token = NO;
+        break;
+    } /* SWITCH */
+} /* QUALIFIER_PARSE */
+/* -  -  -  -  -  -  -  */
+/*
+ * History: (8-22-86) Changed A1 such that a creg statement will not
+ *        change the contents of the WORD.TEST buffer. This was to
+ *        support the DECGOPL instr. which was an IF followed by a
+ *        WHILE statement; the WHILE (CREG<>0) overwrote the test
+ *        cond specified by the IF
+ */
+test(t,stat_type) /* test if this variable is a valid test condition */
+char t[];
+int stat_type;
+{
+    char temp[80] , tmp_buffer[80];
+
+    if ( in_list(cond_list,t) == YES ) {
+        get_value(t,cond_list,temp);
+        if ( translate(temp,tmp_buffer,testfield) == NO )
+            err(WARNING,TEST_EXCD);
+        if ((strcmp(temp,"-1") && (dev_creg_cond == 0)) ||   /* A1 */
+                (stat_type != WHILE && dev_creg_cond == 1))
+            strcpy(word.test,tmp_buffer);
+        strcat(con_test,"-");
+        strcat(con_test,t);
+        return(YES);
+    }
+    if ( token_type != VARIABLE )
+        return(NO);
+    if ( in_list(def_list,t) == YES ) {
+        get_value(t,def_list,temp);
+        if ( translate(temp,tmp_buffer,testfield) == NO )
+            err(WARNING,TEST_EXCD);
+        if ((strcmp(temp,"-1") && (dev_creg_cond == 0)) ||   /* A1 */
+                (stat_type != WHILE && dev_creg_cond == 1))
+            strcpy(word.test,tmp_buffer);
+        strcat(con_test,"-");
+        strcat(con_test,t);
+        return(YES);
+    }
+    return(NO);
+} /* TEST */
+/* -  -  -  -  -  -  -  -  */
+get_sub_token(a1)
+char a1[];
+{
+    int i;
+
+    if ( i_global >= strlen(con_test) )
+        return(NO);
+    for (i = 0; con_test[i_global] != '-' && con_test[i_global] != '\0';
+         ++i_global) {
+        a1[i++] = con_test[i_global];
+    }
+    a1[i] = '\0';
+    if (con_test[i_global] == '-')    /* the '-' sign separates the */
+        ++i_global;        /* tokens in the test conditions */
+    return(YES);
+} /* GET_SUB_TOKEN */
+/* -  -  -  -  -  -  -  */
+err_cond(msg)
+char *msg;
+{
+    int i;
+
+    ++cond_errors;
+    fprintf(stderr,"\nCondition Error: %s\n",msg);
+    fprintf(stderr,"");
+    for (i = 0; i <= strlen(con_test) && i < i_global; ++i) {
+        if ( con_test[i] == '_' )
+            fprintf(stderr," ");
+        else {
+            if ( con_test[i] == '!' )
+                fprintf(stderr,"<>");
+            else
+                fprintf(stderr,"%c",con_test[i]);
+        }
+    } /* FOR */
+    fprintf(stderr,"\n");
+    for (i = 0; i <= strlen(con_test) && i < i_global; ++i)
+        fprintf(stderr," ");
+    fprintf(stderr,"^");
+} /* ERR_COND */
+/* -  -  -  -  -  -  -  */
+process_test_conditions(t_cond)
+char t_cond[];
+{
+    char a1[80];
+    int polarity;
+
+    if ( negation == YES )
+        negation = 1;
+    else
+        negation = 0;
+    if (!strcmp(t_cond,"pass_dflt") || (!strcmp(t_cond,"creg"))) {
+        if (negation == 1)
+            negation = 0;
+        else
+            negation = 1;
+    }
+    if ( get_sub_token(a1) == NO ) {
+        polarity = negation;
+        if ( polarity == 1 )
+            strcpy(word.pol,"1");
+        else
+            strcpy(word.pol,"0");
+        return;
+    }
+    if ( a1[0] != '=' && a1[0] != '!' )
+        err_cond("use = or <> for testing conditions");
+    else { /* ** */
+        if ( a1[0] == '=' )
+            eq_sign = 1;
+        else
+            eq_sign = 0;
+        if ( get_sub_token(a1) == NO )
+            err_cond(BIN_COMPARE);
+    } /* ELSE ** */
+    if (!strcmp(t_cond,"creg")) {
+        if (chck_validity("0#",a1) == NO)
+            err_cond("CREG =/<> 0 only");
+    }
+    else {
+        if (chck_validity("01#",a1) == NO)
+            err_cond(BIN_COMPARE);
+    }
+    if ( a1[0] == '0' )
+        test_val = 0;
+    else
+        test_val = 1;
+    polarity =  ( !negation &&  eq_sign && !test_val ) ||
+            ( !negation && !eq_sign &&  test_val ) ||
+            (  negation && !eq_sign && !test_val ) ||
+            (  negation &&  eq_sign &&  test_val );
+    if ( polarity == 1 )
+        strcpy(word.pol,"1");
+    else
+        strcpy(word.pol,"0");
+} /* PROCESS_TEST_CONDITIONS */
+/*  -  -  -  -  -  -  */
+/*
+if STAT_TYPE is IF, then CREG =/<> 0 must be treated as a test
+condition; if WHILE, then the test condition field is not used
+*/
+cond_check(stat_type)
+int stat_type;
+{
+    char a[80];
+    int go_on;
+
+    for (go_on = YES, i_global = 1; go_on != NO;) {
+        if ( get_sub_token(a) != YES ) {
+            go_on = NO;
+            break;
+        }
+        if ( !strcmp(a,"creg") &&
+            (dev_creg_cond == 0 ||
+              (dev_creg_cond == 1 && stat_type == WHILE)
+            )
+           ) {
+            if ( negation == YES ) {
+                fprintf(stderr,"\n-  -  -  -  -\n");
+                fprintf(stderr,
+"Warning: NOT has no effect on CREG condition in this statement");
+                fprintf(stderr,
+"\nRefer to source line %d:",line_number);
+                fprintf(stderr,"\n%s\n",sorce_line);
+                fprintf(stderr,"-  -  -  -  -\n");
+            }
+            if (get_sub_token(a) != YES) {
+                err_cond("ERROR 49 no such condition");
+                return;
+            }
+            switch(a[0]) {
+            case '=' :
+                con_type = COND1;
+                break;
+            case '!' :
+                con_type = COND2;
+                break;
+            default  :
+                err_cond("ERROR 12 check condition field");
+                break;
+            }
+            if ( get_sub_token(a) != YES ) {
+                err_cond("need a number");
+                return;
+            }
+            if ( a[0] != '0' && a[0] != '1' ) {
+                if ( in_list(def_list,a) == NO ) {
+                    err_cond("ERROR 41 use a binary number");
+                    return;
+                }
+                else {
+                    get_value(a,def_list,a);
+                    if (chck_validity("0#",a) == NO)
+                        err_cond(
+"ERROR 42 use a binary number (compare CREG with 0 only)");
+                }
+            }
+            else {
+                if ( a[0] != '0' ) {
+                    err_cond(
+"ERROR 15 compare CREG with 0 only");
+                    return;
+                }
+            }
+            if (con_type == COND1)
+                put_in_command_line("COND1");
+            if (con_type == COND2)
+                put_in_command_line("COND2");
+        }
+        else {
+            put_in_command_line("COND3");
+            process_test_conditions(a);
+            go_on = NO;
+        }
+    }
+} /* COND_CHECK */
+/* -  -  -  -  -  -  -  */
+/* return a binary number in BIN_VAL */
+return_bin(bin_val)
+char bin_val[];
+{ char buf[80] , buf2[80];
+  int tmpval;
+
+tmpval = -1;
+lex(icon);
+switch(token_type) {
+case VARIABLE:
+    if ( (in_list(def_list ,icon) == YES) ||
+         (in_list(cond_list,icon) == YES) ) {
+        if (in_list(cond_list,icon) == YES)
+            get_value(icon,cond_list,buf);
+        else
+            get_value(icon,def_list,buf);
+        if (translate(buf,buf2,outfield) == NO )
+            err(FATAL,OUT_EXCEED);
+    }
+    else {
+        err(WARNING,"undefined variable");
+        err_recovery(token_type,PUNCT_MARK,NUMBER);
+    }
+    break;
+case NUMBER :
+    if (translate(icon,buf2,outfield) == NO)
+        err(FATAL,OUT_EXCEED);
+    break;
+default :
+    err(FATAL,"undefined variable");
+} /* SWITCH */
+tmpval = atoi(buf2);
+switch(tmpval) {
+case 0 :
+case 1 : sprintf(bin_val,"%d",tmpval);
+     break;
+default: err(WARNING,"ERROR 33 use a binary number");
+     err_recovery(token_type,PUNCT_MARK,WHITE_SPACE);
+     break;
+} /* SWITCH */
+} /* RETURN_BIN */
+/* -  -  -  -  -  -  -  */
+/*
+STAT_TYPE tells if this condition is for an IF or WHILE statement.
+When STAT_TYPE is TEST_CONDITION, the test condition to parse can
+be of the form ( condtion ) or condition. TEST_CONDITION is passed
+when parsing for a default test condition. See PARS_TEST().
+*/
+condition_parse(stat_type)
+int stat_type;
+{
+    char binary_val[80];
+
+    con_test[0] = '\0';
+    negation = NO;
+    lex(icon);
+    if ( icon[0] != '(') {
+        if (stat_type != TEST_CONDITION) {
+            err(WARNING,"ERROR 31 use '(' with condition");
+            err_recovery(token_type,VARIABLE,KEYWORD);
+        }
+        else
+            get_new_token = NO;
+    }
+    else
+        put_in_command_line(icon);
+    lex(icon);
+    if ( the_keyword == NOT ) {
+        negation = YES;
+        lex(icon);
+    }
+    if ( test(icon,stat_type) != YES ) {
+        err(WARNING,"ERROR 86 invalid test condition");
+        err_recovery(token_type,PUNCT_MARK,WHITE_SPACE);
+    }
+    lex(icon);
+    switch(icon[0]) {
+    case '=' :
+        strcat(con_test,"-=");
+        return_bin(binary_val);
+        strcat(con_test,"-");
+        strcat(con_test,binary_val);
+        break;
+    case '<' :
+        lex(icon);
+        if ( icon[0] != '>' ) {
+            err(WARNING,"ERROR 50 inequality sign <>");
+            err_recovery(token_type,NUMBER,VARIABLE);
+        }
+        strcat(con_test,"-!"); /* -! is the not equal sign */
+        return_bin(binary_val);
+        strcat(con_test,"-");
+        strcat(con_test,binary_val);
+        break;
+    default : get_new_token = NO;
+    } /* SWITCH */
+    cond_check(stat_type);
+    lex(icon);
+    if ( icon[0] != ')' ) {
+        if (stat_type == TEST_CONDITION) {
+            get_new_token = NO;
+            return;
+        }
+        err(WARNING,"ERROR 32 use ')' to close condition");
+        err_recovery(token_type,KEYWORD,WHITE_SPACE);
+    }
+    else
+        put_in_command_line(icon);
+} /* CONDITION_PARSE */
+/* -  -  -  -  -  -  -  */
+src_parse()
+{
+    char temp_buf[80],buf1[80];
+    int tm_seen;
+
+    lex(icon);
+    tm_seen = NO;
+    switch (the_keyword) {
+    case END    : get_new_token = NO;
+                      return;
+    case NESTED :
+    case NEST   :
+        get_new_token = NO;
+        return;
+    case TM :
+        tm_seen = YES;  /* process tm & pl alike except for tm_seen */
+    case PL :
+        put_in_command_line(icon);
+        lex(icon);
+        if ( icon[0] != '(' ) {
+            err(WARNING,ENCLOSE_DATA);
+            err_recovery(token_type,VARIABLE,NUMBER);
+        }
+        else
+            put_in_command_line(icon);
+        lex(icon);
+        if ( token_type != VARIABLE && token_type != NUMBER ) {
+            err(WARNING,"ERROR 60 put constant/number here");
+            err_recovery(token_type,PUNCT_MARK,VARIABLE);
+        }
+        else {
+            if ( token_type == VARIABLE ) {
+                if ( in_list(def_list,icon) == NO ) {
+                    an_undefined_label(icon);
+                    resolve_label = YES;
+                }
+                else {
+                    get_value(icon,def_list,temp_buf);
+                    if ( translate(temp_buf,buf1,datafield) == NO )
+                        err(WARNING,DATA_EXCD);
+                    strcpy(word.data,buf1);
+                    if ( tm_seen == YES )
+                        strcpy(word.constant,buf1);
+                    strcpy(icon,temp_buf);
+                }
+            }
+            else { /* it was a number */
+                if ( translate(icon,temp_buf,datafield) == NO )
+                    err(WARNING,DATA_EXCD);
+                strcpy(word.data,temp_buf);
+                if ( tm_seen == YES )
+                    strcpy(word.constant,temp_buf);
+            }
+            put_in_command_line("data");
+        }
+        lex(icon);
+        if ( icon[0] != ')' ) {
+            err(WARNING,ENCLOSE_DATA);
+            err_recovery(token_type,PUNCT_MARK,NUMBER);
+        }
+        else {
+            put_in_command_line(icon);
+        }
+        break;
+    case CREG :
+        put_in_command_line("(CREG)");
+        break;
+    case SREG :
+    case STACK:
+        put_in_command_line("(STACK)");
+        break;
+    default   :
+        if ( icon[0] == ';' ) {
+            get_new_token = NO;
+            break;
+        }
+        if ( icon[0] == '(' ) {
+            lex(icon);
+            switch(the_keyword) {
+            case CREG: strcpy(buf1,"(CREG)");
+                break;
+            case SREG:
+            case STACK: strcpy(buf1,"(STACK)");
+                break;
+            default: err(FATAL,"Use STACK, CREG or SREG");
+                break;
+            } /* SWITCH */
+            lex(icon);
+            if ( icon[0] != ')' ) {
+                err(WARNING,"ERROR 95 close with ')'");
+                err_recovery(token_type,PUNCT_MARK,WHITE_SPACE);
+            }
+            else
+                put_in_command_line(buf1);
+        }
+        else {
+            if ( icon[0] != ',' ) {
+                err(WARNING,"ERROR 72 put PL, TM, or SREG here");
+                err_recovery(token_type,PUNCT_MARK,WHITE_SPACE);
+            }
+            else
+                get_new_token = NO;
+        }
+        break;
+    }
+} /* SRC_PARSE */
+/* -  -  -  -  -  -  -  -  */
+/* Look for "AND CLEAR_EQ" to force EQ condition into test condition
+   select field. Issue a warning message that this replacement is
+   taking place.
+*/
+clr_parse()
+{
+lex(icon);
+if (strcmp(icon,"and")) {
+   get_new_token = NO;
+   return;
+}
+lex(icon);
+if (strcmp(icon,"clear_eq")) {
+  err(WARNING,"Use CLEAR_EQ");
+  err_recovery(token_type,VARIABLE,PUNCT_MARK);
+  return;
+} /* IF */
+if (test("eq",IF) != YES)
+  err(FATAL,"No EQ flag to test");
+err(NOTICE,"Test field will now select EQ flag");
+put_in_command_line("CLREQ");
+} /* CLR_PARSE */
+/* -  -  -  -  -  -  -  -  */
+pars_command()
+{
+    action_parse();
+    clr_parse();
+    src_parse();
+    clr_parse();
+    qualifier_parse();
+    clr_parse();
+    lex(icon);
+    if ( icon[0] == ',' ) {
+        put_in_command_line(icon);
+        action_parse();
+        clr_parse();
+        src_parse();
+        clr_parse();
+    }
+    else
+        get_new_token = NO;
+} /* PARS_COMMAND */
+/*  -  -  -  -  -  -  */
+/*
+ * History: (8-21-86) modified the ELSE section of IF-THEN-ELSE statement to
+        handle the DECGOPL construct defined in the datafile Am29PL141.
+ *
+ */
+if_parse()
+{
+    condition_parse(IF);
+    lex(icon);
+    if ( the_keyword != THEN ) {
+        put_in_command_line("then");
+/* make the THEN in IF-THEN optional */
+        get_new_token = NO;
+    }
+    else
+        put_in_command_line(icon);
+    pars_command();
+    lex(icon);
+    if ( the_keyword == ELSE ) {
+        put_in_command_line(icon);
+        lex(icon);
+        if (the_keyword == WHILE) {
+            put_in_command_line(icon);
+            while_parse();
+        }
+        else {
+            get_new_token = NO;
+            pars_command();
+        }
+    }
+    else
+        get_new_token = NO;
+} /* IF_PARSE */
+/*  -  -  -  -  */
+get_to_item(statmnt)
+int statmnt;
+{
+lex(icon);
+if (statmnt == POP && the_keyword != TO) {
+    get_new_token = NO;
+    return;
+}
+if ( the_keyword != TO ) {
+    err(WARNING,"ERROR 66 put 'TO' here: loop TO PL");
+    err_recovery(token_type,KEYWORD,WHITE_SPACE);
+}
+else {
+    put_in_command_line(icon);
+}
+src_parse();
+clr_parse();
+} /* GET_TO_ITEM */
+/*  -  -  -  -  */
+while_parse()
+{
+    condition_parse(WHILE);
+    lex(icon);
+    switch( the_keyword ) {
+    case IF       :
+        put_in_command_line(icon);
+        if_parse();
+        break;
+    case RET      :
+    case LOAD     :
+    case GOTO     :
+    case PUSH     :
+    case WAIT     :
+        put_in_command_line(icon);
+        lex(icon);
+        if ( the_keyword == ELSE ) {
+            put_in_command_line(icon);
+            pars_command();
+        }
+        else
+            get_new_token = NO;
+        break;
+    case LOOP     :
+        put_in_command_line(icon);
+                get_to_item(LOOP);
+        lex(icon);
+        if ( the_keyword == ELSE ) {
+            put_in_command_line(icon);
+            pars_command();
+        }
+        else
+            get_new_token = NO;
+        break;
+    default       :
+        err(WARNING,"ERROR 7 specify opcode");
+        err_recovery(token_type,VARIABLE,NUMBER);
+        break;
+    } /* SWITCH */
+} /* WHILE_PARSE */
+/* -  -  -  -  -  -  -  -  */
+cmp_parse()
+{
+    lex(icon);
+    if ( the_keyword != TM ) {
+        err(WARNING,"ERROR 35 looking for TM");
+        err_recovery(token_type,PUNCT_MARK,WHITE_SPACE);
+    }
+    else {
+        get_new_token = NO;
+        src_parse();
+    }
+    lex(icon);
+    if ( the_keyword != TO && the_keyword != PL ) {
+        err(WARNING,"ERROR 17 compare TM to PL");
+        err_recovery(token_type,KEYWORD,WHITE_SPACE);
+    }
+    if ( the_keyword == TO ) {
+        put_in_command_line(icon);
+        lex(icon);
+    }
+    if ( the_keyword != PL ) {
+        err(WARNING,"ERROR 77 specify pipeline data field");
+        err_recovery(token_type,PUNCT_MARK,WHITE_SPACE);
+    }
+    else {
+        get_new_token = NO;
+        src_parse();
+    }
+} /* CMP_PARSE */
+/*  -  -  -  -  */
+cont_parse()
+{
+    strcpy(word.pol,"-");
+    strcpy(word.test,"-");
+    put_in_command_line(icon);
+    clr_parse();
+} /* CONT_PARSE */
+/* -  -  -  -  -  */
+evaluate(num_char)
+char num_char[];
+{
+    int i , j , sum;
+
+    for (i = 0, j = strlen(num_char) - 1, sum = 0; i < strlen(num_char);
+                                    ++i)
+        if ( num_char[i] == '1' )
+            sum = sum + power(2,(j-i));
+    return(sum);
+} /* EVALUATE */
+/* -  -  -  -  -  -  -  */
+/*
+Parse the control outputs. The DEGREE flag can take the values WARNING
+and VALID. The WARNING flag is used for Ver 3.0 file compatibility:
+If an operand is immediately followed by another operand, then don't
+push this operand on the stack, but evaluate the rest of the expression.
+When parsing resumes, the next icon taken will be the very last operand.
+*/
+ctrl_out_expression(degree)
+int degree;
+/*
+Evaluate the control output expression. OR,
+AND and nesting of expressions is possible
+*/
+{
+    char buf[80] , buf2[80], last_parse[40];
+    int stop;
+
+    last_stk_type = PUNCT_MARK;
+    for (stop = NO;
+         stop == NO && icon[0] != ',' && icon[0] != ';'; ) {
+        switch(token_type) {
+        case VARIABLE :
+            switch(last_stk_type) {
+            case VARIABLE :
+            case NUMBER   : if (degree == WARNING) {
+                        get_new_token = NO;
+                        stop = YES;
+                        break;
+                    }
+                    break;
+            case PUNCT_MARK:if (last_parse[0] == ')' &&
+                            degree == WARNING) {
+                        get_new_token = NO;
+                        stop = YES;
+                        break;
+                    }
+                    break;
+            } /* SWITCH */
+            if (stop == YES)
+                break;
+            if ( (in_list(def_list ,icon) == YES) ||
+                 (in_list(cond_list,icon) == YES) ) {
+                if (in_list(cond_list,icon) == YES)
+                    get_value(icon,cond_list,buf);
+                else
+                    get_value(icon,def_list,buf);
+                if (translate(buf,buf2,outfield) == NO )
+                    err(WARNING,OUT_EXCEED);
+                put_on_stack(buf2,buf);
+            }
+            else {
+                err(WARNING,"undefined variable");
+                err_recovery(token_type,PUNCT_MARK,NUMBER);
+            }
+            break;
+        case NUMBER   :
+            if ( translate(icon,buf2,outfield) == NO )
+                err(WARNING,OUT_EXCEED);
+            put_on_stack(buf2,buf);
+            break;
+        case KEYWORD  :
+            err(WARNING,"terminate expression with ','");
+            err_recovery(token_type,PUNCT_MARK,KEYWORD);
+            return;
+        default       :
+            if ( (icon[0] == '+') || (icon[0] == '*') ||
+                    (icon[0] == '(') || (icon[0] == ')' ))
+                put_on_stack(icon,buf);
+            else {
+                err(WARNING,"use AND (*) or OR (+) only");
+                err_recovery(token_type,VARIABLE,NUMBER);
+            }
+            break;
+        } /* SWITCH on TOKEN_TYPE */
+        strcpy(last_parse,icon);
+        if (stop == NO)
+            lex(icon);
+    } /* FOR */
+    put_on_stack("#",buf);    /* evaluate the rest of the stack and put the
+                   result into buf */
+    if ( strlen(buf) > outfield)
+        err(WARNING,OUT_EXCEED);
+    strcpy(word.out,buf);
+    get_new_token = NO;
+} /* CTRL_OUT_EXPRESSION */
+/* -  -  -  -  -  -  */
+assume_label()  /* assume it is a label */
+{
+    char buf[80] , buf2[80] , int_to_ascii[80];
+    int lab_already_defined;
+    int i;
+
+    lab_already_defined = NO;
+    i = WARNING;    /* this will be changed when a valid undefined label
+               is seen and there will be no need to change the word
+               count
+            */
+    if ( token_type == VARIABLE ) {
+        if (in_list(def_list,icon) == NO ) {
+            strcpy(db_record.var_string,icon); /* keep this value
+                                  just in case */
+            lex(icon);        /* it is an undefined label */
+            if ( icon[0] == ',' )
+                err(FATAL,"ERROR 83 undefined output value");
+            else { /* else **** */
+                if (icon[0] == '+' || icon[0] == '*'
+                    || icon[0] == '(' || icon[0] == ')') {
+                    err(WARNING,"undefined output name");
+                    return;
+                }
+                word.word_count = pc;
+                i = pc;
+                sprintf(int_to_ascii, "%d", i);
+                strcpy(db_record.value,int_to_ascii);
+                db_record.flag1 = -1;
+                strcpy(db_record.code,"%%%%");
+                db_record.class_token = -1;
+                db_record.class_number = -1;
+                term_list_insert(def_list);
+                i = VALID;
+            } /* ELSE **** */
+            get_new_token = NO;
+        } /* if in list(def_list,icon) */
+        else {
+            lab_already_defined = YES;
+            get_value(icon,def_list,buf2);
+            if ( translate(buf2,buf,outfield) == NO )
+                err(WARNING,OUT_EXCEED);
+            strcpy(word.out,buf);
+            put_on_stack(buf,buf2);
+/* BUF2 is used here as a dummy argument */
+        }
+    } /* if token type == variable */
+    else {  /* a number */
+        if ( translate(icon,buf2,outfield) == NO )
+            err(WARNING,OUT_EXCEED);
+        strcpy(word.out,buf2);
+        put_on_stack(buf2,buf);
+/* BUF is used here as a dummy argument */
+    }
+    lex(icon);
+    if ( icon[0] == ':' && i != VALID ) {
+        if ( lab_already_defined == YES ) {
+            err(FATAL,"ERROR 73 Label redefinition");
+            get_new_token = NO;
+        }
+        word.word_count = evaluate(buf2);
+        if ( word.word_count >= device_limit )
+            err(FATAL,"ERROR 9 beyond addressing range of device");
+        pc = word.word_count;
+        cln_stack_list(0); /* clean STACK, this is a label name */
+        get_new_token = NO;
+        return(LABEL);
+    }
+    else {
+        if ( i != VALID ) {
+            word.word_count = pc;
+            get_new_token = NO;
+            return(NO);
+        }
+    }
+    get_new_token = NO;
+    return(LABEL);
+} /* ASSUME_LABEL */
+/* -  -  -  -  -  -  -  -  */
+/*
+Parse for a condition (EQ for 131, 141, and 142) that will be put in
+the test condition field. This is done to support the "Clear EQ on
+Branch" feature that is implied by the test condition. For the 131, 141
+and 142, if the test condition is EQ, the statement is a branch (execpt
+for a RETURN), and the branch is successful, then clear the EQ flag.
+
+This test condition will be enclosed in square brackets [] and preceded
+by the string CLEAR or SAVE, meaning clear the flag or save the current
+status of the flag. This braketed string will be placed before the
+statement begins.
+*/
+clr_save_parse()
+{ int clr_flag;
+lex(icon);
+if (icon[0] != '[') {
+  get_new_token = NO;
+  return;
+}
+lex(icon);
+clr_flag = 0;  /* assume we will not clear the flag */
+if (strcmp(icon,"clear") && strcmp(icon,"save"))
+  err(WARNING,"Put SAVE or CLEAR");
+if (!strcmp(icon,"clear"))
+  clr_flag = 1;
+lex(icon);
+if (clr_flag == 1) {
+/* test the variable as if it were in an IF statement */
+  if (test(icon,IF) != YES) {
+    err(WARNING,"ERROR 86 invalid test condition");
+    err_recovery(token_type,PUNCT_MARK,WHITE_SPACE);
+  } /* IF */
+} /* IF */
+else {
+  if (test("cc",IF) != YES)
+    err(NOTICE,"Notice: No CC condition for default");
+  else
+    err(NOTICE,"Will put CC in test field");
+} /* ELSE */
+lex(icon);
+if (icon[0] == ']')
+  return;
+err(WARNING,"Close [CLEAR/SAVE test_cond] with ']'");
+err_recovery(token_type,VARIABLE,NUMBER);
+} /* CLR_EQ_PARSE */
+/* -  -  -  -  -  -  -  -  */
+lab_parse()
+{
+    int a_label;
+
+    cln_stack_list(0);
+    cln_operator_list(0);
+    stk_token[0] = '\0';
+    lex(icon);
+    switch(icon[0]) {
+    case ',' : if ( dflt_out[0] == '\0' )
+            err(WARNING,SPEC_DEFAULT);
+        strcpy(word.out,dflt_out);
+        word.word_count = pc;
+        strcpy(word.oe_od,"1");
+        return;
+    case '.' : get_new_token = NO;
+           return;
+    default  : if (!strcmp(icon,"org"))
+            err(FATAL,"Use . with ORG");
+           break;
+    } /* SWITCH */
+    if (token_type != VARIABLE && token_type != NUMBER && icon[0] != '(') {
+        word.word_count = pc;
+        if ( the_keyword != OE && the_keyword != OD ) {
+            err(WARNING,
+"ERROR 43 need label, constant/number, or OE/OD");
+            err_recovery(token_type,PUNCT_MARK,VARIABLE);
+            if ( token_type == KEYWORD )
+                err(FATAL,"keyword");
+        }
+        else  { /* +++ */
+            if ( the_keyword == OE )
+                strcpy(word.oe_od,"1");
+            else
+                strcpy(word.oe_od,"0");
+            lex(icon);
+            if ( icon[0] == ',' ) {
+                if ( dflt_out[0] == '\0' )
+                    err(WARNING,SPEC_DEFAULT);
+                strcpy(word.out,dflt_out);
+                return;
+            }
+            if ( token_type != VARIABLE && token_type != NUMBER ) {
+                if ( icon[0] != '(' ) {
+                    err(WARNING,
+"ERROR 44 need number/constant to enable");
+                    err_recovery(token_type,PUNCT_MARK,
+                                WHITE_SPACE);
+                }
+                else
+                    ctrl_out_expression(VALID);
+            }
+            else
+                ctrl_out_expression(VALID);
+        } /* ELSE +++ */
+    } /* IF token type != variable and != number */
+    else { /* @@@ */
+        if ( icon[0] != '(' ) {
+            for (a_label = assume_label(); a_label == LABEL;) {
+                lex(icon);  /* remove ':' symbol */
+                lex(icon);
+                switch(icon[0]) {
+                case '.' : get_new_token = NO;
+                           return;
+                case ',' : word.word_count = pc;
+                           strcpy(word.out,dflt_out);
+                       strcpy(word.oe_od,"1");
+                       return;
+                case '(' : word.word_count = pc;
+                       get_new_token = NO;
+       /* to break out of the FOR loop */  a_label = NO;
+                       break;
+                default  : if (token_type == KEYWORD) {
+                        a_label = NO;
+                        get_new_token = NO;
+                        break;
+                       }
+                       a_label = assume_label();
+                       break;
+                } /* SWITCH */
+            } /* FOR */
+        } /* IF */
+        else {
+            word.word_count = pc;
+            get_new_token = NO;
+        }
+        if (token_type != KEYWORD)
+            lex(icon);
+        if (icon[0] == '.') {
+            get_new_token = NO;
+            return;
+        }
+        if (icon[0] == '+' || icon[0] == '*' || icon[0] == '('
+                || icon[0] == ')') {
+            ctrl_out_expression(VALID);
+            strcpy(word.oe_od,"1");
+            lex(icon);
+            if ( strcmp(icon,",") ) {
+                err(WARNING,SEPARATE_OUT);
+                err_recovery(token_type,KEYWORD,WHITE_SPACE);
+            }
+            return;
+        }
+        if ( strcmp(icon,":") && token_type != KEYWORD) {
+            if ( strcmp(icon,",") ) {
+                err(WARNING,
+"ERROR 62 put ':' for labels and ',' for output");
+                err_recovery(token_type,VARIABLE,NUMBER);
+            }
+            else {
+                strcpy(word.oe_od,"1");
+                get_new_token = NO;
+            }
+        }
+        else {
+            lex(icon);
+            if (icon[0] == '.') {
+                get_new_token = NO;
+                return;
+            }
+            if ( icon[0] == ',' ) {
+                if ( dflt_out[0] == '\0' )
+                    err(FATAL,SPEC_DEFAULT);
+                strcpy(word.oe_od,"1");
+                strcpy(word.out,dflt_out);
+                return;
+            }
+            if ( icon[0] == '(' ) {
+                ctrl_out_expression(VALID);
+                strcpy(word.oe_od,"1");
+                lex(icon);
+                if ( strcmp(icon,",") ) {
+                    err(WARNING,SEPARATE_OUT);
+                    err_recovery(token_type,KEYWORD,
+                            WHITE_SPACE);
+                }
+                return;
+            }
+            if ( token_type != VARIABLE && token_type != NUMBER ) {
+                if ( the_keyword != OE && the_keyword != OD ) {
+                    err(WARNING,LOOK_OE);
+                    err_recovery(token_type,VARIABLE,
+                                NUMBER);
+                }
+                if ( the_keyword == OE )
+                    strcpy(word.oe_od,"1");
+                else
+                    strcpy(word.oe_od,"0");
+                lex(icon);
+                if ( icon[0] == ',' ) {
+                    if ( dflt_out[0] == '\0' )
+                        err(WARNING,SPEC_DEFAULT);
+                    strcpy(word.out,dflt_out);
+                    return;
+                }
+                if ( token_type != VARIABLE &&
+                        token_type != NUMBER ){
+                    if ( icon[0] != '(' ) {
+                        err(WARNING,LOOK_OE);
+                        err_recovery(token_type,
+                            PUNCT_MARK,WHITE_SPACE);
+                    }
+                    else
+                        ctrl_out_expression(VALID);
+                }
+                else
+                    ctrl_out_expression(VALID);
+            }
+            else {
+                strcpy(word.oe_od,"1");
+                ctrl_out_expression(VALID);
+            }
+        }
+    } /* @@@ */
+    lex(icon);
+    if ( strcmp(icon,",") ) {
+        err(WARNING,SEPARATE_OUT);
+        err_recovery(token_type,KEYWORD,WHITE_SPACE);
+    }
+} /* LABEL_PARSE */
+/* -  -  -  -  -  -  -  -  */
+state_parse()
+{
+    lex(icon);
+    if (icon[0] == '.') {
+        org_check();
+        return;
+    }
+    switch(the_keyword) {
+    case IF       :
+        put_in_command_line(icon);
+        if_parse();
+        break;
+    case WHILE    :
+        put_in_command_line(icon);
+        while_parse();
+        break;
+    case CMP      :
+        put_in_command_line(icon);
+        cmp_parse();
+        break;
+    case CONTINUE :
+        cont_parse();
+        break;
+    case RET      :
+    case LOAD     :
+    case GOTO     :
+    case PUSH     :
+    case WAIT     :
+    case CALL     :
+    case NEST     :
+    case NESTED   :
+    case DEC      : if ( dflt_present != YES ) {
+                err(WARNING,
+"ERROR 46 no default condition available");
+            err_recovery(token_type,PUNCT_MARK,WHITE_SPACE);
+        }
+        else {
+            strcpy(word.pol,dflt_pol);
+            strcpy(word.test,a_deflt_test);
+            put_in_command_line("if_(_COND3_)_then");
+            get_new_token = NO;
+            pars_command();
+            lex(icon);
+            if ( the_keyword == ELSE ) {
+                put_in_command_line(icon);
+                lex(icon);
+                if (the_keyword == WHILE) {
+                    put_in_command_line(icon);
+                    while_parse();
+                }
+                else {
+                    get_new_token = NO;
+                    pars_command();
+                }
+            }
+            else
+                get_new_token = NO;
+        }
+        break;
+    default :
+        err(WARNING,"ERROR 48 unknown command");
+        err_recovery(token_type,PUNCT_MARK,KEYWORD);
+        break;
+    } /* SWITCH */
+++pc; /* increment program counter */
+lex(icon);
+if (icon[0] != ';')
+    err(WARNING,"ERROR 94 use ';' to separate statements");
+if ( resolve_label == NO )
+    chck_device(YES);
+else
+    chck_device(NO);
+return;
+} /* STATE_PARSE */
+/* -  -  -  -  -  -  -  -  */
+/*
+ * History: Removed the realloc() call when freeing the LABEL_UNDEFINED entry
+ *          (8-21-86)
+ */
+
+undefined_labels_check()  /* check if all the undefined labels have been
+                             resolved */
+{
+    struct word_record *label_list, *cleaning_ptr;
+    int lab_errors;
+    char lbl_buf[80] , a_buff[80];
+
+    for (label_list = lab_undefined, lab_errors = 0; label_list != NULL; ) {
+        if (in_list(def_list, label_list->data) == NO) {
+            fprintf(stderr,"\nERROR 89 [%s] in line ",label_list->data);
+            fprintf(stderr,"%d undefined",label_list->lab_line);
+            ++errors;
+            ++lab_errors;
+        } /* IF */
+        else {
+            get_value(label_list->data,def_list,lbl_buf);
+            if ( translate(lbl_buf,a_buff,datafield) == NO )
+                err(WARNING,DATA_EXCD);
+            strcpy(word.data,a_buff);
+            strcpy(word.oe_od,label_list->oe_od);
+            strcpy(word.opcode,label_list->opcode);
+            strcpy(word.pol, label_list->pol );
+            strcpy(word.test,label_list->test);
+            strcpy(word.out,label_list->out);
+            strcpy(word.constant,label_list->constant);
+            word.word_count = label_list->word_count;
+            word.format_flag = label_list->format_flag;
+        } /* ELSE */
+        label_list = label_list->next_word;
+        cleaning_ptr = lab_undefined;   /* reclaim the space */
+        lab_undefined = lab_undefined->next_word;
+        free((char *)cleaning_ptr);
+        chck_device(VALID); /* insert this word after checking the
+                    devices */
+    } /* FOR */
+    if ( lab_errors == 0 )
+        return(YES);
+    return(NO);
+} /* UNDEFINED LABELS CHECK */
+/*  -  -  -  -  -  -  */
+chck_device(action)  /* if action is yes, then check the device parameters
+                         and insert into the PROM list. If no, then just set
+                         the opcode field but do not insert */
+int action;
+{
+    struct com_string *lst;
+    char buf3[80] , buf4[80];
+    int format_limit;
+
+    if (action != VALID) {
+        for (lst = com_list; lst != NULL; lst = lst->next_com_string) {
+            if ( !strcmp(lst->var_string,command_line) )
+                break;
+        }
+        if (lst == NULL) {
+            fprintf(stderr,"\nStatement [%s]\n is ",command_line);
+            fprintf(stderr,"not supported in [%s]\n",part_name);
+            ++errors;
+            return;
+        }
+        get_value(command_line,com_list,buf3);
+        strcat(buf3,"#H");
+        if ( !strcmp(lst->code,"CMP")) {
+            word.format_flag = 1;    /* use the second format */
+            format_limit = 3;
+        }
+        else
+            format_limit = 5;
+        if ( translate(buf3,buf4,format_limit) == NO )
+            err(FATAL,"OPCODE field exceeded");
+        strcpy(word.opcode,buf4);
+        if ( action == NO )
+            strcpy(tail_label->opcode,word.opcode);
+    } /* IF action != valid */
+    if ( action != NO )
+        word_insert();     /* insert the word */
+} /* CHECK_DEVICE */
+/*  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  */
+/* History: (8-22-86) Check for .ORG <value> statement to force assembly
+          to continue at the value. This routine also checks for NULL
+            labels.
+*/
+org_check()
+{
+    char org_buf[80];
+
+    lex(icon);
+    if (strcmp(icon,"org"))
+        err(FATAL,"ERROR 48 unknown command");
+    lex(icon);
+    if (token_type != NUMBER)
+        err(FATAL,"ERROR 44 need number/constant");
+    translate(icon,org_buf,16);  /* 16 bit maximum integer value */
+    pc = evaluate(org_buf);
+} /* ORG_CHECK */
+/* -  -  -  -  -  -  */
+pars_statement()
+{
+    int i;
+
+    resolve_label = NO;
+    if (pc >= device_limit) {
+        lex(icon);
+        switch (icon[0]) {
+        case '.': get_new_token = NO;
+              break;
+        default : err(FATAL,"microprogram exceeds PROM limit");
+        } /* SWITCH */
+        }
+    for ( i = 0; i < 256; ++i )
+        command_line[i] = '\0';
+    strcpy(word.oe_od,"-"); /* initialize word with the default state */
+    strcpy(word.opcode,"-");
+    strcpy(word.pol,"-");
+    if (test("cc",IF) != YES)  /* init the WORD.TEST to CC */
+      err(FATAL,"No CC condition for default");
+    strcpy(word.data,"-");
+    strcpy(word.out,"-");
+    word.format_flag = 0; /* assume general instruction format first */
+    strcpy(word.constant,"-");
+    clr_save_parse();  /* added 5/19/87 */
+    lab_parse();
+    state_parse();
+} /* PARS_STATEMENT */
+/*  -  -  -  -  -  -  -  */
+SHAR_EOF
+#    End of shell archive
+exit 0

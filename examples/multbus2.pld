@@ -1,0 +1,274 @@
+"Date: January 21, 1987
+ Multibus II arbiter controller. This design makes efficient
+ use of the AmPAL23S8. All the I/O pins and 5 of the 6
+ internal registers are used.
+"
+DEVICE multibus2_module (p23s8)
+PIN
+bclk = 1 (CLOCK)
+/bus_req = 2 (INPUT combinatorial)  "from parallel bus"
+clear = 3 (INPUT combinatorial)
+/sc0 = 4 (INPUT combinatorial)
+/sc1 = 5 (INPUT combinatorial)
+/sc2 = 6 (INPUT combinatorial)
+breq = 7 (INPUT combinatorial)
+arb_id_match = 8 (INPUT combinatorial)
+req_ready = 9 (INPUT combinatorial)
+ownrdy = 11 (INPUT combinatorial)
+hi_pri = 12 (INPUT enable_high active_high combinatorial
+       io_feedback)
+agent_status_error = 13 (INPUT enable_high active_high
+    combinatorial io_feedback)
+trans_state[2:0] = 14:16 (OUTPUT enable_high active_high
+    registered)
+/sc4 = 17 (INPUT enable_high active_low)
+put_bus_request = 18 (OUTPUT enable_high active_high
+    registered reg_feedback)
+put_arb_id = 19 (OUTPUT enable_high active_high combinatorial
+    io_feedback)
+/transfer_monitor = 21 (BREG registered active_low)
+/arb_monitor[1:0] = 22:23 (BREG registered active_low)
+/arb_oper[1:0] = 25:24 (BREG registered active_low)
+;
+
+define  "constant definitions"
+REQUEST_PHASE = 1,
+NO_TRANSFER = 0,
+DO_TRANSFER = 1,
+NO_REQ = 0,
+RESOLUTION2 = 1,
+RESOLUTION3 = 2,
+NO_ARB = 0,
+RESOLUTION_STATE = 1,
+ACQUISITION_STATE = 2,
+
+"5 state assignments for TRANS_STATE machine"
+NO_OP_IN_PROGRESS = 0,
+REQ_PHASE = 4,
+OWN_HDSHK = 1,
+OWN_HDSHK_WAIT = 2,
+ERROR_EOT = 3,
+
+"EXCHANGE is condition where exchange of bus
+  ((arb_monitor[1:0] = RESOLUTION3)*/sc1) *
+      (  ((transfer_monitor = NO_TRANSFER)*/sc0) +
+         ((transfer_monitor = DO_TRANSFER)* sc2*sc4)
+      )
+"
+EXCHANGE = (arb_monitor[1]*/arb_monitor[0]*/sc1)*
+           (/transfer_monitor*/sc0 + transfer_monitor*sc2*sc4),
+OWN_NXT_CLK = /EXCHANGE*arb_oper[1]*/arb_oper[0] +
+               EXCHANGE*arb_id_match*/arb_oper[1]*arb_oper[0];
+
+"Logic Equation Section"
+BEGIN
+   "disable the output buffer; use as dedicated input"
+enable(hi_pri,sc4,agent_status_error) = 0;
+
+  "enable these outputs always"
+enable(trans_state[2:0],
+       put_bus_request,put_arb_id) = #b11111;
+
+if (clear) then  "clear signal comes from P18P8"
+  reset(trans_state[2:0],transfer_monitor,arb_monitor[1:0],
+        arb_oper[1:0],put_bus_request);
+
+"TRANSFER_MONITOR: 1-bit state machine present in all requesting
+ agents to monitor the transfer operations on the bus"
+case (transfer_monitor)
+  begin
+  NO_TRANSFER) begin
+               if (clear) then
+                  transfer_monitor = NO_TRANSFER;
+               if (sc0) then "request phase indicator activated"
+"track transfer operation"
+                  transfer_monitor = DO_TRANSFER;
+               end;
+  DO_TRANSFER) begin
+               if (sc2*sc4) then "end of transfer"
+                  transfer_monitor = NO_TRANSFER;
+               else  "transfer not complete yet"
+                  transfer_monitor = DO_TRANSFER;
+               end;
+  end; "TRANSFER_MONITOR"
+
+"ARB_MONITOR: 2-bit state machine in all agents
+ monitoring arbitration operations ------------"
+case (arb_monitor[1:0])
+  begin
+  NO_REQ)
+    begin
+"an agent somewhere has signalled a bus request"
+    if (bus_req) then
+      arb_monitor[1:0] = RESOLUTION2;
+    else
+      arb_monitor[1:0] = NO_REQ;
+    end;
+    arb_monitor[1:0] = RESOLUTION3;
+  RESOLUTION3)  "arbitration IDs have settled with the
+                 ID of the highest priority agent"
+    begin
+    if (EXCHANGE) then
+      arb_monitor[1:0] = NO_REQ;
+    else "stay in this state until bus exchange possible"
+      arb_monitor[1:0] = RESOLUTION3;
+    end;
+  end;  "ARBITRATION MONITOR state machine"
+
+"ARB_OPER: 2-bit state machine in all requesting agents
+ monitoring the arbitration operation------------------"
+case (arb_oper[1:0])
+  begin
+  NO_ARB)
+    begin
+    if (breq*  "agent wants bus"
+        (/bus_req + "no current bus requests on parallel bus"
+          EXCHANGE*hi_pri
+        )
+       ) then
+      begin
+      put_bus_request = 1; "assert bus request"
+      arb_oper[1:0] = RESOLUTION_STATE;
+      end;
+    else
+      arb_oper[1:0] = NO_ARB;
+    end;
+  RESOLUTION_STATE)
+    begin
+    put_arb_id = 1;     "put arbitration ID on ARB lines"
+    if (EXCHANGE*arb_id_match) then
+      arb_oper[1:0] = ACQUISITION_STATE;
+    else
+      begin
+      arb_oper[1:0] = RESOLUTION_STATE;
+      put_bus_request = 1; "continue asserting bus request"
+      end;
+    end;
+  ACQUISITION_STATE)
+    begin
+    if (EXCHANGE) then
+      arb_oper[1:0] = NO_ARB;
+    else
+      arb_oper[1:0] = ACQUISITION_STATE;
+    end;
+  end; "ARBITRATION OPERATION state machine"
+
+"TRANS_STATE[2:0]: 3-bit state machine to track state-flow
+ sequence for bus owners performing a transfer operation. The
+ state machine is assigned to these outputs because they will
+ now be accessible to the rest of system which will take care
+ of generating other output signals -------------------------"
+case (trans_state[2:0])
+  NO_OP_IN_PROGRESS)
+    begin
+    if (req_ready*OWN_NXT_CLK) then
+      trans_state[2:0] = REQ_PHASE;
+    end;
+  REQ_PHASE)
+    begin
+    if (ownrdy) then
+      trans_state[2:0] = OWN_HDSHK;
+    else
+      trans_state[2:0] = OWN_HDSHK_WAIT;
+    end;
+  OWN_HDSHK)
+    begin
+    if (sc4*/sc2*/ownrdy*/agent_status_error) then
+      trans_state[2:0] = OWN_HDSHK_WAIT;
+    if (sc2*sc4) then
+      trans_state[2:0] = NO_OP_IN_PROGRESS;
+"terminate block transfer due to error"
+    if (/sc2*agent_status_error) then
+      trans_state[2:0] = ERROR_EOT;
+    if (sc4*ownrdy*/agent_status_error*/sc2 + /sc4) then
+      trans_state[2:0] = OWN_HDSHK;
+    end;
+  OWN_HDSHK_WAIT)
+    begin
+    if (ownrdy) then
+      trans_state[2:0] = OWN_HDSHK;
+    else
+      trans_state[2:0] = OWN_HDSHK_WAIT;
+    end;
+  ERROR_EOT)
+    begin
+    trans_state[2:0] = NO_OP_IN_PROGRESS;
+    end;
+  end; "TRANSFER_STATE machine"
+END.
+
+TEST_VECTORS
+IN   bclk clear;
+BREG transfer_monitor;
+IN   /sc0 /sc2 /sc4;
+BREG arb_monitor[1:0];
+IN   /sc1 /bus_req;
+BREG arb_oper[1:0];
+OUT  put_bus_request;
+IN   arb_id_match breq;
+OUT  trans_state[2:0];
+IN   ownrdy req_ready agent_status_error;
+OUT  put_arb_id;
+IN   hi_pri;
+"signals              /       p       t t t      a  p
+               a a    b  a a  u       s s s  o r g  u
+  c  t         r r    u  r r  t  a    t t t  w e n  t h
+b l  r  / / /  m m  / s  b b  b  r b  a a a  n q t    i
+c e  m  s s s  o o  s r  o o  r  b r  t t t  r r e    p
+l a  o  c c c  n n  c e  p p  e  i e  e e e  d d r  i r
+k r  n  0 2 4  1 0  1 q  1 0  q  d q  2 1 0  y y r  d i
+--------------------------------------------------------"
+"vector 1"
+0 X  L  X X X  L L  1 1  L L  L  0 0  L L L  0 0 0  L 0;  "power-up reset"
+C 1  L  1 1 1  L L  1 1  L L  L  0 0  L L L  0 0 0  L 0;  "exception reset"
+"a bus request -------v detected on the bus"
+C 0  L  1 1 1  L H  1 0  L L  L  0 0  L L L  0 0 0  L 0;
+C 0  L  1 1 1  H L  1 1  L L  L  0 0  L L L  0 0 0  L 0;
+"go to transfer operation state when SC0* active low"
+C 0  H  0 1 1  H L  1 1  L L  L  0 0  L L L  0 0 0  L 0;
+"stay there until EOT or SC2* and SC4* are active low: See (1)"
+C 0  H  1 1 1  H L  1 1  L L  L  0 0  L L L  0 0 0  L 0;
+C 0  H  1 0 1  H L  1 1  L L  L  0 0  L L L  0 0 0  L 0;
+C 0  H  0 1 1  H L  1 1  L L  L  0 0  L L L  0 0 0  L 0;
+C 0  H  1 1 1  H L  1 0  L L  L  0 0  L L L  0 0 0  L 0;
+"-------------------------------------------------------"
+"signals              /       p       t t t      a  a s
+               a a    b  a a  u       s s s  o r g  r c
+  c  t         r r    u  r r  t  a    t t t  w e n  b 1
+b l  r  / / /  m m  / s  b b  b  r b  a a a  n q t  c l
+c e  m  s s s  o o  s r  o o  r  b r  t t t  r r e  y o
+l a  o  c c c  n n  c e  p p  e  i e  e e e  d d r  c c
+k r  n  0 2 4  1 0  1 q  1 0  q  d q  2 1 0  y y r  l k
+--------------------------------------------------------"
+"vector 10"
+"this agent now wants to use the --v-- bus"
+C 0  H  1 1 1  H L  1 0  L L  L  0 1  L L L  0 0 0  L 0;
+C 0  H  1 1 1  H L  1 0  L L  L  0 1  L L L  0 0 0  L 0;
+"stay in RESOLUTION state until bus exchange is possible"
+C 0  H  1 1 1  H L  1 1  L H  H  0 1  L L L  0 0 0  H 0;
+C 0  H  1 1 1  H L  1 1  L H  H  0 0  L L L  0 0 0  H 0;
+C 0  H  1 1 1  H L  1 1  L H  H  0 0  L L L  0 0 0  H 0;
+C 0  H  1 1 1  H L  1 1  L H  H  0 0  L L L  0 0 0  H 0;
+"EOT -----v-v-- End of Transfer handshake"
+C 0  L  1 0 0  L L  1 1  H L  L  1 0  L L L  0 0 0  L 0; "(1)"
+C 0  L  1 1 1  L L  1 1  H L  L  1 0  L L L  0 0 0  L 0;
+C 0  L  1 1 1  L L  1 1  H L  L  0 0  L L L  0 0 0  L 0;
+C 0  L  1 1 1  L L  1 1  H L  L  0 0  L L L  0 0 0  L 0;
+"vector 20"
+"request information from this agent is ready -v-"
+C 0  L  1 1 1  L L  1 1  H L  L  0 0  H L L  0 1 0  L 0;
+"ENTER request PHASE -----------------^-^-^--"
+C 0  L  1 1 1  L L  1 1  H L  L  0 0  L H L  0 1 0  L 0;
+C 0  H  0 1 1  L L  1 1  H L  L  0 0  L H L  0 1 0  L 0;
+"wait in state 2 (OWN_HDSHK_WAIT) ----v-v-v- until OWNRDY "
+C 0  H  1 1 1  L L  1 1  H L  L  0 0  L H L  0 1 0  L 0;
+C 0  H  1 1 1  L L  1 1  H L  L  0 0  L H L  0 1 0  L 0;
+C 0  H  1 1 1  L L  1 1  H L  L  0 0  L H L  0 1 0  L 0;
+C 0  H  1 1 1  L L  1 1  H L  L  0 0  L L H  1 1 0  L 0;
+C 0  H  1 1 1  L L  1 1  H L  L  0 0  L L H  0 0 0  L 0;
+C 0  H  1 1 1  L L  1 1  H L  L  0 0  L L H  0 0 0  L 0;
+C 0  L  1 0 0  L L  1 1  H L  L  0 0  L L L  0 1 0  L 0;
+C 0  L  1 1 1  L L  1 1  H L  L  0 0  L L L  0 0 0  L 0;
+END.
+
+

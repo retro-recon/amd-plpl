@@ -1,0 +1,43 @@
+#c
+-I -1 argument: Specify PLPL Input Source File to Compile.
+=Specify Input File to Compile!
+-O 1 argument: Specify output filename for compiled equations.
+=New Compiled Output Filename!
+-B 0 argument: Display compilation results for each line.
+-P -0 argument: Write currently used partname to a file.
+~
+#o
+-I -1 argument: Specify PLPL Intermediate File to Optimize.
+=Specify Intermediate/Compiled File to Optimize!
+-O 1 argument: Specify new filename for optimized equations.
+=New Optimized Output Filename!
+~
+#j
+-I -1 argument: Specify PLPL Intermediate/Optimized File to make a JEDEC Map.
+=Specify Intermediate/Optimized File!
+-O 1 argument: Specify new filename for device/fuse map.
+=New JEDEC Output Filename!
+-L 1 argument: Specify new filename for logic equations.
+=New Filename for EquatioX-W 1 argument: Specify Filename for Simulation
+ Waveform Output.
+=Specify Filename for Simulation/Waveform Output!
+-A 0 argument: Use ASCII characters f Function Table!
+-O 1 argument: Specify new filename for generated test vectors.
+=New Test Vector Output Filename!
+-X 0 argument: Set don't care value to 1.
+~
+#s
+-I -2 arguments: JEDEC map file and test vector file.
+=Specify JEDEC file to model and Test Vector file to simulate model!
+-O 1 argument: Specify filename for simulation output.
+=Specify Output Filename for Simulation Results!
+-W 1 argument: Specify Filename for Simulation Waveform Output.
+=Specify Filename for Simulation/Waveform Output!
+-A 0 argument: Use ASCII characters for waveform diagram.
+-C 1 argument: Specify Filename for Calculated Test Vectors.
+=Specify Filename for Calculated Test Vector Output!
+-F 2 arguments: Specify Filename for JEDEC-Equation Output and Name File.
+=Specify JEDEC-Equation Output Filename and Name File!
+-X 1 argument: value of don't care value.
+=Specify Don't care value (0/1)!
+~

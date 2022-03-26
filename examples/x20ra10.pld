@@ -1,0 +1,112 @@
+"Dec. 27, 1987
+A test file for the PAL20RA10. Simple SSI/MSI functions are
+defined for every output. A function table has been written
+which will test the following:
+  - polarity: note that pin 23 is defined as active LOW
+  - enable: note that pin 13 and the enable product term must
+      be active; an enable PT is defined for every output
+  - reset
+  - set
+  - use of the product term clock
+  - flow-through mode: every output in the 20RA10 can be
+      defined as flow-through if the reset and set PTs are
+      active at the same time
+Note that the clock PT feature is invoked by the
+function name CLOCK_PT();
+The ENABLE function is still called ENABLE(), but the designer must
+realize that this is ANDed with the pin 13.
+"
+device test20RA10 (p20ra10)
+pin
+  pr_pin = 1 (control) "preload pin"
+  p[2:11] = 2:11 (input combinatorial) "input pins"
+  enb = 13 (control) "enable pin"
+  p[14:22] = 14:22 (output active_high registered)
+ /p[23]    = 23    (output active_low  registered);
+
+begin
+p[14] = p[ 2] + p[3]*p[14];   enable(p[14]) = p[4];  clock_pt(p[14]) = p[ 9];
+"output pin p[14] is enable by pin p[4], and clocked by pin p[9]"
+
+p[15] = p[ 2] + p[3]*p[15];   enable(p[15]) = p[4];  clock_pt(p[15]) = p[ 9];
+p[16] = p[ 2] + p[3]*p[16];   enable(p[16]) = p[4];  clock_pt(p[16]) = p[ 9];
+p[17] = p[ 2] + p[3]*p[17];   enable(p[17]) = p[4];  clock_pt(p[17]) = p[ 9];
+p[18] = p[ 2] + p[3]*p[18];   enable(p[18]) = p[4];  clock_pt(p[18]) = p[ 9];
+p[19] = p[ 6] + p[7]*p[19];   enable(p[19]) = p[8];  clock_pt(p[19]) = p[14];
+p[20] = p[ 6] + p[7]*p[20];   enable(p[20]) = p[8];  clock_pt(p[20]) = p[14];
+p[21] = p[ 6] + p[7]*p[21];   enable(p[21]) = p[8];  clock_pt(p[21]) = p[14];
+p[22] = p[ 6] + p[7]*p[22];   enable(p[22]) = p[8];  clock_pt(p[22]) = p[14];
+p[23] = p[ 6] + p[7]*p[23];   enable(p[23]) = p[8];  clock_pt(p[23]) = p[14];
+
+reset (p[14:23]) = p[11];
+preset(p[14:23]) = p[10];
+end.
+test_vectors
+in  pr_pin enb p[2:11];
+out p[14:23];
+begin
+"
+p e
+r n
+e a
+l b
+o l   p p p   p p p p  p p p   p p p  p p p p  p p p
+a e                      1 1   1 1 1  1 1 1 2  2 2 2
+d     2 3 4   5 6 7 8  9 0 1   4 5 6  7 8 9 0  1 2 3
+______________________________________________________"
+1 1   0 0 0   0 0 0 0  0 0 0   Z Z Z  Z Z Z Z  Z Z Z;  " 1"
+"note: in VCTR 2, a warning message (Output pin is configured as an
+       INPUT) will be generated because for a short period of time,
+       the outputs pins will be in a Hi-Z state until the enable PT is
+       calculated. After the enable PT has stabilized, the message will
+       disappear. To observe this, use the debug mode [-b 200] when
+       invoking the simulator
+"
+1 0   0 0 1   0 0 0 1  0 0 0   L L L  L L L L  L L L;  " 2"
+1 0   1 0 1   0 0 0 1  1 0 0   H H H  H H L L  L L L;  " 3"
+1 0   0 0 1   0 0 0 1  0 0 0   H H H  H H L L  L L L;  " 4"
+1 0   0 0 1   0 0 0 1  0 0 1   L L L  L L L L  L L L;  " 5"
+"In VCTR 6,7 PRESET and RESET are tested"
+1 0   0 0 1   0 0 0 1  0 1 0   H H H  H H H H  H H H;  " 6"
+1 0   0 0 1   0 0 0 1  0 0 1   L L L  L L L L  L L L;  " 7"
+1 0   0 0 1   0 0 0 1  0 0 0   L L L  L L L L  L L L;  " 8"
+"In VCTR 9, the PT clock for all the outputs is tested. Note that
+ in debug mode 200, outputs 14 to 18 are clocked first (by pin 9)
+ and then since pin 14 clocks outputs 19 to 23, and output 14 undergoes
+ a L-H tranisition, outputs pins 19-23 are also clocked.
+"
+1 0   1 0 1   0 1 0 1  1 0 0   H H H  H H H H  H H H;  " 9"
+1 0   0 0 1   0 1 0 1  0 0 0   H H H  H H H H  H H H;  "10"
+1 0   0 0 1   0 0 0 1  1 0 0   L L L  L L H H  H H H;  "11"
+1 0   0 0 1   0 0 0 1  0 1 0   H H H  H H H H  H H H;  "12"
+1 0   0 0 1   0 0 0 1  0 0 0   H H H  H H H H  H H H;  "13"
+1 0   0 0 1   0 0 0 1  0 0 0   H H H  H H H H  H H H;  "14"
+1 0   0 0 1   0 0 0 1  0 0 1   L L L  L L L L  L L L;  "15"
+"test Pin PRELOAD"
+0 1   0 0 1   0 0 0 1  0 0 0   1 0 1  1 1 1 0  0 0 1;  "16"
+1 0   0 0 1   0 0 0 1  0 0 0   H L H  H H H L  L L L;  "17"
+1 0   0 0 1   0 0 0 1  0 0 1   L L L  L L L L  L L L;  "18"
+"test flow through mode; ie., RESET and SET active
+ Note that once the RESET and SET lines are removed (VCTR 20)
+ the registered output is returned. The registered outputs are
+ all HIGH even though the last registered output state of all
+ the outputs in VCTR 18 was LOW. This is because the PLPL 2.2
+ simulator will assert RESET and then SET, therefore the contents
+ of the register will be first set to 0, and then set to 1 by the
+ RESET and SET product terms, respectively.
+"
+1 0   1 0 1   0 0 0 1  0 1 1   H H H  H H L L  L L L;  "19"
+1 0   0 0 1   0 1 0 1  0 1 1   L L L  L L H H  H H H;  "20"
+1 0   0 0 1   0 1 0 1  0 0 0   H H H  H H H H  H H H;  "20"
+"test pin enable control"
+1 1   0 0 1   0 0 0 1  0 0 0   Z Z Z  Z Z Z Z  Z Z Z;  "21"
+"Note that because Z is considered LOW, the output state of 14
+ will be interpreted by the simulator as a L-H transition, which
+ will subsequently be a clock for the outputs 19-23. This is why the
+ outputs 19-23 are LOW."
+1 0   0 0 1   0 0 0 1  0 0 0   H H H  H H L L  L L L;  "22"
+"test pin p[4] enable control"
+1 0   0 0 0   0 0 0 1  0 0 0   Z Z Z  Z Z L L  L L L;  "23"
+"test pin p[8] enable control"
+1 0   0 0 1   0 0 0 0  0 0 0   H H H  H H Z Z  Z Z Z;  "24"
+end.

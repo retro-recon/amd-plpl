@@ -1,0 +1,142 @@
+
+DEVICE ARBITER (P22V10)  " VMEbus Priority Arbiter Option
+
+For this application, if the bus is busy, then
+bus requests will be deferred until the BBSY(L)
+(bus busy line active LOW) goes HIGH, unless the bus request is
+of a higher priority. In this case, the bus clear signal BCLR(L) is
+asserted and the current bus master relinquishes control.
+If the bus is free and 2 or more masters request service,
+then the bus is granted to the master with the
+higher priority request line. "
+
+PIN
+clk = 1 (CLK_INPUT combinatorial)
+/bbsy = 2 (INPUT combinatorial)
+/br0 = 3 (INPUT combinatorial)
+/br1 = 4 (INPUT combinatorial)
+/br2 = 5 (INPUT combinatorial)
+/br3 = 6 (INPUT combinatorial)
+master[0] = 17 (IO active_high registered)
+master[1] = 18 (IO active_high registered)
+/bg3in = 19 (IO active_low registered)
+/bg2in = 20 (IO active_low registered)
+/bg1in = 21 (IO active_low registered)
+/bg0in = 22 (IO active_low registered)
+/bclr = 23 (IO active_low registered) ;
+
+BEGIN
+ENABLE(BCLR,BG0IN,BG1IN,BG2IN,BG3IN,MASTER[1:0]) = #b1111111;
+RESET(BCLR,BG0IN,BG1IN,BG2IN,BG3IN,MASTER[1:0]) = #b0000000;
+PRESET(BCLR,BG0IN,BG1IN,BG2IN,BG3IN,MASTER[1:0]) = #b0000000;
+
+"if a bus request occured and bus = free, then activate the bus
+ grant in line corresponding to the highest priority bus request line"
+IF (/BBSY*(BR0+BR1+BR2+BR3)) THEN
+  BEGIN
+  IF (BR3) THEN
+    BG3IN := 1 ;
+  IF (/BR3*BR2) THEN
+    BG2IN := 1 ;
+  IF (/BR3*/BR2*BR1) THEN
+    BG1IN := 1 ;
+  IF (/BR3*/BR2*/BR1*BR0) THEN
+    BG0IN := 1 ;
+  END ;
+
+" while the bus grant in line is active and the bus is still busy,
+  then latch the bus grant signals until BBSY(L) becomes active"
+IF (BG3IN*/BBSY) THEN
+  BG3IN := 1 ;
+IF (BG2IN*/BBSY) THEN
+  BG2IN := 1 ;
+IF (BG1IN*/BBSY) THEN
+  BG1IN := 1 ;
+IF (BG0IN*/BBSY) THEN
+  BG0IN := 1 ;
+
+IF (BG3IN*BBSY) THEN   " when requester responds with BBSY active, then "
+  MASTER[1:0] := 3 ;   " MASTER is set to the line currently controlling"
+IF (BG2IN*BBSY) THEN   " the bus; this is used internally for future    "
+  MASTER[1:0] := 2 ;   " bus priority resolution                        "
+IF (BG1IN*BBSY) THEN
+  MASTER[1:0] := 1 ;
+IF (BG0IN*BBSY) THEN
+  MASTER[1:0] := 0 ;
+
+IF (BBSY) THEN   " when bus busy, then remember current bus master line "
+  MASTER[1:0] := MASTER[1:0] ;
+
+"if a higher priority bus request occurs and the bus is busy, then begin
+ bus resolution (by using bus clear BCLR) under the following conditions :
+ - if BR3 and present bus master is not using bus line 3; i.e., once a device
+   uses BR3, then no one can force it to relinquish the bus
+      or
+ - if BR2 and present bus master is not 3; i.e., BR2 can assert bus clear
+   except when the presetn bus master obtained the bus using bus line 3
+      or
+ - if BR1 and the bus master obtained the bus using bus request line 0, then
+   assert BCLR
+
+==> if BR0 is activated when the bus is busy, then do not assert BCLR; BR0
+    devices cannot force anyone off the bus. This is one possible priority
+    implementation.
+"
+
+IF (BBSY*(BR0+BR1+BR2+BR3)) THEN  "if a bus request occured and bus = busy"
+  BEGIN
+  IF (BR3*(/MASTER[1]+/MASTER[0])) THEN "if BR3 and present master is not "
+    BEGIN
+    BCLR := 1 ;                         " using line 3, then assert BCLR  "
+    IF (BCLR*BBSY) THEN
+        BCLR := 1;
+    END;
+  IF (/BR3*BR2*(/MASTER[1]+/MASTER[0])) THEN
+    BEGIN
+    BCLR := 1 ;
+    IF (BCLR*BBSY) THEN
+        BCLR := 1;
+    END;
+  IF (/BR3*/BR2*BR1*/MASTER[1]*/MASTER[0]) THEN
+    BEGIN
+    BCLR := 1 ;
+    IF (BCLR*BBSY) THEN
+        BCLR := 1;
+    END;
+  END ;
+"
+IF (BCLR*BBSY) THEN     while the bus clear line is active and the bus is
+            still busy, then continue asserting BCLR. Once
+            BBSY is deactivated, then go through normal bus
+            arbitration procedure
+   BCLR := 1 ;
+"
+END.
+
+TEST_VECTORS
+IN  CLK , /BBSY , /BR0 , /BR1 , /BR2 , /BR3 ;
+OUT /BCLR , /BG0IN , /BG1IN , /BG2IN , /BG3IN , MASTER[1:0] ;
+BEGIN
+"   / / / / /      / / / / /    "
+" c b b b b b      b b b b b m m"
+" l s r r r r      c g g g g s s"
+" k y 0 1 2 3      r 0 1 2 3 1 0"
+"-------------------------------"
+  C 1 0 1 1 1      X X X X X X X ;
+  C 0 1 1 1 1      X X X X X X X ;
+  C 1 1 1 1 1      X X X X X X X ;
+  C 1 1 0 0 1      X X X X X X X ;
+  C 0 1 1 1 1      X X X X X X X ;
+  C 0 1 1 1 0      X X X X X X X ;
+  C 0 1 1 1 0      X X X X X X X ;
+  C 0 1 1 1 0      X X X X X X X ;
+  C 1 1 1 1 0      X X X X X X X ;
+  C 1 1 1 1 0      X X X X X X X ;
+  C 1 1 1 1 0      X X X X X X X ;
+  C 0 1 1 1 1      X X X X X X X ;
+  C 0 0 1 1 1      X X X X X X X ;
+  C 0 0 1 1 1      X X X X X X X ;
+  C 0 1 0 1 1      X X X X X X X ;
+  C 0 1 1 0 1      X X X X X X X ;
+  C 0 1 1 1 0      X X X X X X X ;
+END.

@@ -1,0 +1,68 @@
+"Date: May 30, 1987
+ Back-off logic circuit. This device drives the ARBITRATION ID
+ if the agent has issued a bus request and the AMPAL23S8 is in
+ the RESOLUTION state and has generated the PUT_ARB_ID signal.
+ The logic equivalent of the AND is used to make the logic fit
+ into the device.
+"
+DEVICE match (p22P10)
+PIN
+hi_pri = 1 (INPUT combinatorial)
+   "high_priority bus request; actually ARB ID bit 5"
+id4 = 2 (INPUT combinatorial)
+id3 = 3 (INPUT combinatorial)
+id2 = 4 (INPUT combinatorial)
+id1 = 5 (INPUT combinatorial)
+id0 = 6 (INPUT combinatorial)
+/frombus5 = 7 (INPUT combinatorial)
+/frombus4 = 8 (INPUT combinatorial)
+/frombus3 = 9 (INPUT combinatorial)
+/frombus2 = 10 (INPUT combinatorial)
+/frombus1 = 11 (INPUT combinatorial)
+/frombus0 = 13 (INPUT combinatorial)
+put_arb_id = 14 (INPUT active_high combinatorial) "from P23S8"
+agent_breq = 15 (INPUT active_high combinatorial) "agent wants bus"
+/arb_id_match = 17 (OUTPUT active_low combinatorial)
+arb0 = 18 (OUTPUT active_high combinatorial)
+arb1 = 19 (OUTPUT active_high combinatorial)
+arb2 = 20 (OUTPUT active_high combinatorial)
+arb3 = 21 (OUTPUT active_high combinatorial)
+arb4 = 22 (OUTPUT active_high combinatorial)
+arb5 = 23 (OUTPUT active_high combinatorial)
+;
+"Logic Equation Section"
+BEGIN
+enable(arb0,arb1,arb2,arb3,arb4,arb5) = #b111111;
+enable(arb_id_match) = #b1;
+enable(put_arb_id,agent_breq) = #b00; "use as dedicated inputs"
+arb5 = /hi_pri + /(put_arb_id*agent_breq);
+arb4 = /id4 + /hi_pri*frombus5 + /(put_arb_id*agent_breq);
+arb3 = /id3 + /hi_pri*frombus5 + /id4*frombus4 + /(put_arb_id*agent_breq);
+arb2 = /id2 + /hi_pri*frombus5 + /id4*frombus4 +
+       /id3*frombus3 + /(put_arb_id*agent_breq);
+arb1 = /id1 + /hi_pri*frombus5 + /id4*frombus4 +
+       /id3*frombus3 + /id2*frombus2 + /(put_arb_id*agent_breq);
+       /id3*frombus3 + /id2*frombus2 + /id1*frombus1
+       + /(put_arb_id*agent_breq);
+arb_id_match = /hi_pri*frombus5 + /id4*frombus4 + /id3*frombus3 +
+        /id2*frombus2 + /id1*frombus1 + /id0*frombus0
+       + /(put_arb_id*agent_breq);
+END.
+
+test_vectors
+in hi_pri id4 id3 id2 id1 id0 /frombus5 /frombus4 /frombus3
+   /frombus2 /frombus1 /frombus0 agent_breq put_arb_id;
+out /arb_id_match arb5 arb4 arb3 arb2 arb1 arb0;
+begin
+"                            p
+h           agent_breq-----| u
+i                          | t      id_match
+p           /frombus5-     |        |
+r           /frombus0      | i      |
+i id4-id0                  v d      v   /arb5-/arb0
+_____________________________________________________"
+0 1 0 0 1 1  0 0 1 0 0 0   1 0      L   H H H H H HX1 1 0 0 1 1  0 0 1 0 0 0
+ 1 1      L   L L H H H H ;
+1 1 0 0 1 1  0 0 1 1 0 0   1 1      H   L L H H L L ;
+end.
+

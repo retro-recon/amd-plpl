@@ -1,0 +1,2280 @@
+
+
+
+
+
+
+	     Programmable Logic Programming Language
+	              Software Version V2.2
+
+
+
+	                Table of Contents
+
+
+Section                                                      Page
+
+1  Introduction  ...........................................  1
+    1.1 PLPL V2.2 Improvements                                2
+    1.2 Design Methodology: Using PLPL                        4
+
+2  The PLPL Logic Language  ................................  6
+    2.1 Language Elements                                     6
+	 - Operators
+	 - Operator Precedence
+	 - Variables/User-Defined Elements
+    2.2 A Design File ......................................  8
+	 2.2.1 Design Name                                    8
+	 2.2.2 Header (Pin and Macro section)                 9
+	 2.2.3 Logic Specification Section                   11
+
+3  Specifying the Design Logic ............................. 11
+    3.1 Logic Equations                                      11
+	 3.1.1 Scalar Expressions                            11
+	 3.1.2 Vector Expressions                            12
+    3.2 High Level Logic Statements                          13
+	 3.2.1 IF-THEN-ELSE Statement                        13
+	 3.2.2 Logic Test Conditions                         15
+	 3.2.3 Case Statement                                16
+	 3.2.4 Defining State Machines                       18
+    3.3 Pin Polarities                                       19
+	 - Positive Polarity Signals on Negative
+	   Polarity Outputs
+    3.4 Special Product Term Functions                       21
+	 (ENABLE, RESET, PRESET)
+
+4  Generating Test Vectors ................................. 23
+    4.1 Test Vector Format                                   23
+    4.2 Pin Types                                            25
+    4.3 Power-Up Reset                                       28
+    4.4 Preloading Registers                                 28
+
+
+
+
+
+	                       i
+
+
+
+
+5  PLPL V2.2 Reference Manual     .........................  31
+    5.1 PLC (Programmable Logic Compiler)                    31
+    5.2 OPTIMIZE (Logic Optimizer)                           32
+    5.3 JM (JEDEC MAP Generator)                             33
+    5.4 TESTV (Test Vector Generator)                        35
+    5.5 SIM (Functional Simulator)                           36
+    5.6 PLPL (Menu/Control Program)                          38
+    5.7 PLD Utility (for PC users)                           39
+	 5.7.1 Creating a New Source File                    39
+	 5.7.2 Updating a V2.0 File                          40
+
+
+Appendix A   The PLD Database .............................  42
+    1   Architecture Feature List                            42
+    2   Special PLD Functions                                42
+
+Appendix B   ..............................................  44
+    1   Using the XOR Gate in the XRP Series PLDs            44
+    2   Internal Registers on the AmPAL23S8                  44
+    3   AmPAL29M/MA16 Architecture/Control Fuses             44
+    4   The Two-Feedback Macrocell on the AmPAL29M/MA16      44
+    5   Defining I/O Pins as Inputs                          46
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Fourth Printing November 1987
+
+	                         ii
+1  Introduction
+
+
+
+
+
+
+    The Programmable  Logic Programming  Language (PLPL)  package
+was  created  to  facilitate  the  design and definition of logic
+functions using  AMD's advanced  architecture programmable  logic
+devices (PLDs). This package consists of a logic compiler (called
+PLC),  a  logic  optimizer  (OPTIMIZE),  a  combination JEDEC map
+generator  and  equation  listing/documentation  program  (JM), a
+manual test  vector generator (TESTV), and a menu/control program
+(PLPL) to simplify use of the package. PLD, a utility program, is
+also included  for PC  users to  simplify the  creation of source
+files.
+
+    A designer using PLDs logically specifies the functions using
+the  PLPL  logic  language.   This  design  specification is then
+compiled  to produce logic equations (representing the functions)
+which are written to an intermediate file. These equations can be
+logically  optimized  to  get  a  minimal  form.   JM  takes this
+intermediate file and generates a JEDEC-standard device/fuse map.
+
+    The  map is  the pattern  the PLD  must be programmed with to
+generate the functions  defined in the  design file. This  design
+can be verified before programming  a device by specifying a  set
+of test vectors containing specified inputs and expected outputs.
+These vectors are then used to functionally simulate the  design.
+After  successfully   simulating  the   design,  a   PLD  can  be
+programmed.
+
+    PLDs offer customizable logic  and a quick design cycle time.
+PLPL V2.2 eases the task of defining and programming a  PLD, thus
+further shortening the design time.
+
+
+
+
+	                             Programmable Logic Division
+	                             AMD/MMI
+	                             November 17, 1987
+
+
+
+	                          1
+1.1 PLPL V2.2 Improvements
+
+    PLPL V2.2  is the  most recent  version of  the logic  design
+package.  Suggestions  and  errors  detected  by  our FAEs, sales
+force, and customers were noted and fixed.
+
+The improvements include:
+
+ (1) Better DeMorganization capabilities in the compiler.
+     Equations such as Q4 can now be handled:
+
+	 /Q4 = (X1 + Y1)*(X2 + Y2)*(X3 + Y3)*(X4 + Y4);
+
+     The  previous versions would usually  run out of memory
+     because  the  compiler  would  first evaluate the right
+     hand side of  the expression into  its sum of  products
+     form,  and  then  DeMorganize  this  expanded form. The
+     compiled form will now evaluate to:
+
+	   Q4 = /X1*/Y1 + /X2*/Y2 + /X3*/Y3 + /X4*/Y4;
+
+ (2) An improved logic optimizer.
+     The V2.1 logic optimizer did not handle cases such as
+
+	 F = A*/B + A*C + A*/D + /B*/C*D;
+
+     The product  term A*/B is logically  redundant in the F
+     function. The V2.2  optimizer now detects this class of
+     equations.
+
+ (3) More documentation output.
+     The  JEDEC map  generator (JM)  program will  product a
+     more  comprehensive  documentation  listing.  This will
+     include:
+       = Boolean equation listing
+       = DIP chip diagram with signal names
+       = Product term usage statistics per pin
+
+	                        2
+ (4) Simple Design Fitter.
+     If  a designer  assigns a  logic equation  to an output
+     with  not  enough  product  terms,  the JM program will
+     recommend  an output pin  assignment (assuming variable
+     product term distribution) to  make the design fit into
+     the selected device.
+
+     If  this  part  cannot  support  the  design,  then the
+     program  will prompt the  user to specify  a part which
+     may fit the design; or the program can be instructed to
+     search a list of parts to try and fit the design.
+
+     This fitting process will  only try to match  the logic
+     equations to output pins with enough product terms. The
+     number  of  inputs  required  by  the  design  are  not
+     considered.
+
+ (5) A new multipurpose functional simulator.
+     The new V2.2  simulator will functionally  simulate PLD
+     designs by recreating the logic model from a JEDEC fuse
+     map.  Test  vector  stimuli  are  then  applied to this
+     model.  By  working  from  the  JEDEC   map,  the  V2.2
+     simulator can be  used by any package  which produces a
+     JEDEC standard fuse map.
+
+     Additional simulator features include:
+       = waveform output
+       = generate a PLPL source file from a JEDEC map
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	                          3
+1.2 Design Methodology: Using PLPL
+
+A designer using PLPL performs the following steps:
+
+(1) Write logic functions to be programmed  into a PLD using
+    the PLPL language. This is the source or design file.
+
+(2) Use PLC to compile the design file; the output of PLC is
+    called an intermediate file.
+
+(3) If required,  use the optimizer to  logically reduce the
+    logic  equations  in  the  intermediate file produced by
+    PLC.
+
+(4) Optionally specify  a function  table in  the PLD design
+    file  from  which  JEDEC-formatted  test vectors will be
+    generated (using TESTV).
+
+(5) Use JM  to produce  a JEDEC-standard  fuse map  from the
+    equations in the intermediate file.
+
+(6) If test vectors were specified,  use SIM to simulate the
+    logic model represented by the JEDEC  fuse map file with
+    the test vectors generated by TESTV.
+
+(7) If there are any errors, repeat steps (1) to (6).
+
+(8) Load the  fuse map into a PLD  programmer to program the
+    PLD.
+
+
+
+
+
+
+	                          4
+
+
+
+
+
+	        PLPL V2.2 PLD Design Environment
+
+
+
+
+    USER -----|
+	      v
+	   Editor  <-------------------------------------------|
+	      |                                                |
+	      |                                                |
+	      v                                                |
+	PLD Design File                                        |
+	      |                                                |
+     |-----<--|-->----------------------------|                |
+     |                                        |                |
+     v                     PLD                v                |
+ Compiler               Database -------> Test Vector          |
+     |                                     Generator           |
+     v                                         |               |
+ intermediate                                  v               |
+    file                                  test vectors         |
+     |                                         |               |
+     v                                         |               |
+ Optimizer                                     |               |
+     |                                         |               |
+     v                                         |               |
+ optimized ----->------|                       |               |
+    file               |                       |               |
+	               |                       v               |
+	               v        |--------> Simulator           |
+      PLD -----> JM: JEDEC Map  |              |               |
+   Database        Generator    |              |               |
+	               |        |              v               |
+       |---------<-----|        |    If there are simulation   |
+       v               v        |    errors, then re-edit the  |
+     Logic         JEDEC Fuse ->|    PLD design file           |
+    Equation          Map                      |               |
+      List             |_________________      |------>--------|
+	                                |
+	                         _______v_________________
+	                        |                         |
+	                        |     PLD Programmer      |
+	                        |_________________________|
+
+
+
+	                         5
+2   The PLPL Logic Language
+
+    PLPL is  a logic  language used  to simplify  the design  and
+definition  of Boolean  logic functions.  These functions  can be
+described  using  logic  equations  with  Boolean   operators  in
+canonical or standard sum-of-product form,  or through high-level
+language constructs such as IF-THEN-ELSE and CASE.
+
+
+2.1 Language Elements
+
+    There are three main elements in the PLPL language: keywords,
+punctuation marks, and user-defined elements.
+
+
+Keywords
+
+    The following is the  list of keywords that the  PLC compiler
+attributes special meaning to:
+
+       BEGIN         DEVICE       END      PRESET
+       CASE          ELSE         IF       RESET
+       DEFINE        ENABLE       PIN      THEN
+
+    These should not be used as variables or constant names.
+
+Punctuation Marks
+
+    These symbols are interpreted in the PLC language:
+
+       +  ->  Boolean OR operator        Ex: C = A+B
+       *  ->  Boolean AND operator       Ex: C = A*B
+       %  ->  Boolean XOR operator       Ex: C = A%B
+      (,)
+	  ->  Parentheses operators to control logic
+	      evaluation.
+	             Ex: C = A*(B+E) is different from
+	                 C = A*B + E
+       /  ->  Boolean complement operator Ex: C = /A
+       =  ->  Assignment operator         Ex: C = A
+       "  ->  Encloses comments. These are used to improve
+	      the readability of the design file and for
+	      documentation. Comments cannot be nested.
+       ;  ->  Statement terminator. This must be put at
+	      the end of each statement.
+       :  ->  indicates a range of values.
+       ,  ->  concatenates values and variables in CASE
+	      statements and functions.
+       .  ->  Indicates the end of file and must be preceded
+	      by the keyword "END".
+
+
+	                          6
+    Comments  must begin and  end with the  " sign. Such comments
+can be placed anywhere in a PLPL file to  improve readability and
+documentation. Comments cannot be nested.
+
+Operator Precedence
+
+    There are four logical operators in PLC: NOT (/), AND (*), OR
+(+), and XOR (%). In addition to these, the parentheses operators
+'()' are  provided to  control the  grouping or  associativity of
+these  operators.  The   operators  are  arranged  in   order  of
+precedence as follows:
+
+     Operation            Operator            Associativity
+
+    primary                   ()              right to left
+    bitwise complement        /               right to left
+    bitwise AND               *               right to left
+    bitwise OR,XOR           +,%              right to left
+
+    In the  expression F =  A*B + /C  + D, A  and B will be ANDed
+first  because   '*'  has  higher  precedence   than  '+'.  C  is
+complemented  also before the '+' operator is evaluated. That is,
+the expression is evaluated as F = ((A*B) + ((/C) + D)).
+
+    Note that the '+' and '%' operators have the same precedence.
+Use  parentheses  to   prevent  any  ambiguities  in   the  logic
+expression.
+
+Example: F = (A%B) + (C%D) will be evaluated differently from
+	 F =  A%B  +  C%D
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	                          7
+User-Defined Elements
+
+    You  can create variables  or numbers in  PLPL. Variables are
+alphanumeric strings which begin with an alphabetic character and
+may contain up  to 24 characters.  These include all  26 letters,
+the numbers 0-9,  and the underscore ('_')  symbol. Spaces cannot
+be used,  and upper  and lower  case characters  are treated  the
+same.
+
+Example: VAR_A  this is a valid variable name
+	 VAR A  invalid variable name
+
+    Numbers  can  be  expressed  in  one of four radices: binary,
+octal,  decimal  and  hexadecimal.  To  specify a radix, the '#x'
+symbol is  used, where 'x' is b, o,  d, or h to represent binary,
+octal,  decimal,  or  hexadecimal,  respectively.  If '#x' is not
+used,  the number is  assumed to be  decimal. In PLC, the numbers
+have to be positive integers.
+
+Example: #b1110  binary representation of 14
+	 #o016   octal representation of 14
+	 #d14    14 base 10
+	   14    decimal representation of 14
+	 #hE     hexadecimal representation of 14
+
+
+    Note: Upper or lower characters can be used for the
+	  keywords, variables, or numbers. For example,
+	  no distinction will be made between the character
+	  strings "DEVICE" and "Device".
+
+
+
+
+2.2 PLPL Design File
+
+    Logic equations or function  definitions are specified in  an
+ASCII  PLPL design  file. Most  text editors/word  processors can
+create  files  in  ASCII  mode,  which  are  free  of any control
+characters.
+
+    The  design file contains the  following sections: the design
+name, the header, and the logic specification.
+
+
+2.2.1 Design Name
+
+    The  design  name  section  contains  the keyword DEVICE, the
+design name, and the part to be used in parentheses.
+
+	         DEVICE design_name (part_name)
+
+	                          8
+2.2.2 Header
+
+    The header consists of  two subsections: a pin definition and
+an optional  define section. Pin  names and variables  defined in
+these two subsections can be used in the logic equation section.
+
+(1) Pin Definition Section
+
+    The  designer assigns  a name  and architectural  features to
+each pin  on the  PLD. For  example, the  AmPAL16R8 (P16R8) has 8
+inputs  and 8 registered active LOW  outputs. A design making use
+of 2  inputs and  5 outputs  on this  device can  be described as
+follows:
+
+    DEVICE example (P16R8)
+    PIN  a = 1 (input combinatorial)
+	/b = 2 (input combinatorial)  "active low input"
+	/state[3:0] = 13:16 (output registered active_low)
+	/c = 18 (output registered active_low) ;
+
+    In this example, pins 1 and 2 have been defined  as the input
+variables  A  and  /B  (active  low  input),  and  pin  18 as the
+registered output variable  C that is  also active low.  Pins can
+also be associated in groups called vectors. Once a group of pins
+has been  defined as a vector,  this group can be  referred to by
+the  vector  definition.  This  is  helpful when specifying state
+machines or address/data buses. In the example, the group of pins
+13,14,15,  and  16  have  been  assigned  to  the  output  vector
+state[3:0]. This is logically equivalent to the definition:
+
+    PIN  a = 1 (input combinatorial)
+	/b = 2 (input combinatorial)
+	/state[3] = 13 (output registered active_low)
+	/state[2] = 14 (output registered active_low)
+	/state[1] = 15 (output registered active_low)
+	/state[0] = 16 (output registered active_low)
+	/c = 18  (output registered active_low);
+
+    The range of pins  to be assigned to a vector  can be tersely
+described  by using  the ':'  symbol as  in "13:16". In addition,
+non-sequential pin  numbers can be specified by using ','.
+
+Examples: /state[3:0] = 13:15,17 (output registered active_low)
+	  /state[3:0] = 18,20:22 (output registered active_low)
+	  /state[3:0] = 13,16:14 (output registered active_low)
+
+    An element or  elements in a vector can  be accessed by using
+the appropriate subscripts.
+
+    Example: c = a*b*state[3];    "access the 3rd vector element"
+	     state[3:2] = state[1:0];
+	           "assign the last two vector elements to the
+	            two most significant bits"
+
+	                          9
+    If an  input is active LOW, then  the user prefaces the input
+pin  name with  the '/'  operator. This  is demonstrated with the
+above definition of input  signal B. The same is true with output
+pins, but now the architecture  definition of the output pin must
+include the ACTIVE_LOW description.
+
+    All architecture  features (e.g., INPUT,  OUTPUT, REGISTERED,
+ACTIVE_LOW  etc.) are enclosed in parentheses. The pin definition
+section  is terminated by  ';'. The number  of pins available and
+the  corresponding  architectural  features  are   different  for
+various PLDs.  A list  of architecture  features for  each PLD is
+listed  in the  corresponding database  file (e.g., database file
+for PAL22V10 is  P22V10). See Appendix A for a description of the
+database file.
+
+(2) The DEFINE section (optional)
+
+    PLPL supports macro/intermediate variable definitions. A PLPL
+macro is a scalar element  assigned to an integer constant  or an
+often-used  logic  equation.   Vector  macros  are  currently not
+supported. Each  macro definition is separated by a comma and the
+DEFINE  section  is  terminated  by  a  ';'.  This is an optional
+section.
+
+Example: DEFINE LOAD       = ENABLE1*ENABLE2 ,
+	        OUTPUT1    = 20 ,
+	        SET_SIGNAL = LOAD + SYSRESET ; "last definition"
+
+    In the example, LOAD has been assigned to the logic  equation
+ENABLE1*ENABLE2, while the name  OUTPUT1 has been assigned to the
+constant decimal  20. The signals  names ENABLE1 and  ENABLE2 are
+assumed to be names in the pin definition section.
+
+    The  logic  equations  assigned  to  macro  names can contain
+variables  and  logic  operators.   The  variables  can  also  be
+previously  defined macro names,  as shown in  the definition for
+the macro SET_SIGNAL, where the macro LOAD is logically ORed with
+the signal SYSRESET.
+
+    Macros are used to  simplify the logic specification  section
+by  assigning  easily  recognized  names  to  logic  equations or
+constants. It  is easier to  remember that a  load signal is LOAD
+instead  of a  logic equation  ENABLE1*ENABLE2 and  that an often
+used value is called OUTPUT1 instead of the decimal number 20.
+
+
+	                          10
+2.2.3 Logic Specification Section
+
+    This section contains the logic definition of functions to be
+programmed into a PLD. These  function definitions can be written
+in  terms   of  statements  consisting  of   logic  equations  or
+high-level statements.
+
+    Logic Equation:   C = A*B + C*/E;
+
+    High-Level Statement:
+
+	              IF (A*B) THEN
+	                 C = D + /E;
+
+    The logic specification section is bracketed by the BEGIN and
+END keywords (the END is followed by the '.' sign). Any number of
+logic statements can  be included between  these two keywords.  A
+complete description of  the logic statement formats  is given in
+Section 3.
+
+3   Specifying the Design Logic
+
+    The statements in the main BEGIN-END block that  describe the
+logic functions can be  expressed in terms of logic  equations or
+high level statements.
+
+3.1 Logic Equations:
+
+    Boolean  logic  equations  can  be  written  using  the logic
+operators  described  in  the  language  elements  section.  This
+capability  is  provided  for  designers  who want to specify the
+Boolean logic for  a function.  The logic equation is composed of
+three parts: the variable  on the left hand side,  the assignment
+symbol '=',  and the logic  expression on the  right hand side of
+the  '='.  Each  logic  equation  is  terminated  by a ';'. Logic
+equations can be expressed in scalar or vector formats.
+
+3.1.1 Scalar Expressions
+
+    The left hand side of the equation can be a pin name or a pin
+vector element (e.g., SIGNAL[3]). This pin must be defined in the
+PIN definition section as an output, IO or internal register. The
+logic expression  on the right  hand side of  the '=' can  be any
+Boolean  algebraic expression using the  logic operators AND (*),
+OR  (+), NOT (/),  and XOR (%).  In addition, evaluation of logic
+statements can also be controlled by the use of the parenthetical
+operators. Each equation is considered a single statement.
+
+    Example: If the variables B and C are to be evaluated first,
+	     then these are enclosed in parenthesis.
+
+	                C = A*(B+C)*/D ;
+
+	                          11
+3.1.2 Vector Expressions
+
+    Logic  equations  can  be  assigned  to  pins which have been
+defined as vectors. For example, if a vector VCTR_A[3:0] is to be
+assigned the value of another vector  VCTR_B[0:3] logically ANDed
+with a vector VCTR_C[3:0], then this is written as:
+
+	     VCTR_A[3:0] = VCTR_B[0:3]*VCTR_C[3:0];
+
+This is easier to write than:
+	        VCTR_A[3] = VCTR_B[0]*VCTR_C[3];
+	        VCTR_A[2] = VCTR_B[1]*VCTR_C[2];
+	        VCTR_A[1] = VCTR_B[2]*VCTR_C[1];
+	        VCTR_A[0] = VCTR_B[3]*VCTR_C[0];
+
+    Scalar variables can  also be used  when working with  vector
+variables.
+
+Example:  VCTR_A[3:0] = VCTR_B[0:3]*/A;
+
+is equivalent to:
+
+	            VCTR_A[3] = VCTR_B[0]*/A;
+	            VCTR_A[2] = VCTR_B[1]*/A;
+	            VCTR_A[1] = VCTR_B[2]*/A;
+	            VCTR_A[0] = VCTR_B[3]*/A;
+
+Vectors cannot be assigned to scalar variables, as in
+
+	                C = VCTR_A[3:0];
+
+Vectors cannot be  created by concatenating  scalars or parts  of
+vectors (using ',') in a logic expression such as:
+
+	         VCTR_A[3:0] = A,B,VCTR_A[1:0];
+
+An error will be generated for the above statement.
+
+Vectors can also be assigned numbers:
+
+	                VCTR_A[3:0] = 6;
+
+PLPL will convert the number into binary form and assign a binary
+digit   to  every  vector  element.   The  preceding  example  is
+equivalent to:
+
+VCTR_A[3:0] = #b0110 ==>  VCTR_A[3] = 0;
+	                  VCTR_A[2] = 1;
+	                  VCTR_A[1] = 1;
+	                  VCTR_A[0] = 0;
+
+The vector must  be large enough to represent  the binary form of
+the number, or else an error will be generated.
+
+	                          12
+3.2 High-Level Logic Statements
+
+    The designer can describe  logic functions in a  higher level
+format  by  making  use  of  the  PLPL statement constructs. PLPL
+supports two statement formats: IF-THEN-ELSE and CASE.
+
+3.2.1 IF-THEN-ELSE Statement
+
+    This language  construct is similar to  the IF-THEN-ELSE used
+in  regular programming  languages. In  PLPL, logic equations are
+constructed from statements  in the THEN  and ELSE sections.  The
+statement format is:
+
+    IF (logic condition) THEN
+      [statement]
+    ELSE
+      [statement]
+
+    For example,  if an output pin is to  be set when a condition
+(e.g., A) is  true, and reset when not true,  this can be defined
+as:
+
+    IF (A) THEN
+      OUTPUT = 1;
+    ELSE
+      OUTPUT = 0;
+
+    This is the same as  writing OUTPUT = A, where OUTPUT will be
+active (1) when the condition A is true and inactive (0) when not
+true.   The  IF-THEN-ELSE  statement   makes  the  function  more
+understandable. A 2-input AND gate can be similarly described:
+
+    IF (A*B) THEN        Truth Table  A B OUTPUT
+      OUTPUT = 1;                     0 0    0
+    ELSE                              0 1    0
+      OUTPUT = 0;                     1 0    0
+	                              1 1    1
+
+    The high-level description is equivalent to "OUTPUT = A*B".
+
+	                          13
+    [statement]  can   be  a  single  statement  or  a  group  of
+statements  bracketed by  BEGIN and  END followed  by a ';'.  For
+example:
+
+    IF (/A) THEN
+      BEGIN
+      A = B+C;
+      G = VCTR_A[3]+ B;
+      END;
+    ELSE
+      etc..
+
+    The  entire  IF-THEN-ELSE  statement  is  considered a single
+statement and can be nested inside another IF-THEN-ELSE.
+
+    IF (/A) THEN
+      IF (B+C) THEN    "nested IF-THEN-ELSE"
+	C = A*B;
+      ELSE
+	C = A*D;
+    ELSE
+      A = B;
+
+    The  ELSE part in  any IF-THEN-ELSE is  optional but any ELSE
+section will  be matched with  the most recent  IF section, hence
+care must be taken when using nested IF-THEN-ELSE statements.
+
+For example:
+    IF (/A) THEN
+      IF (B+C) THEN    "nested IF-THEN"
+	C = A*B;
+    ELSE       "(1)"
+      A = B;
+
+    The  ELSE (1) is matched with IF  (B+C) THEN, and not IF (/A)
+THEN.  In  order  to  match  the  ELSE  with  (/A), BEGIN and END
+keywords  must be used to bracket  the statements between IF (/A)
+THEN and the ELSE, as shown in the following example:
+
+    IF (/A) THEN
+      BEGIN
+      IF (B+C) THEN    "nested IF-THEN is now a single statement"
+	C = A*B;
+      END;
+    ELSE           "ELSE now matches with IF (/A) THEN"
+      A = B;
+
+	                          14
+3.2.2 Logic Test Conditions
+
+    The  IF-THEN-ELSE statement requires  a logic test condition.
+This  condition can  be a  logic expression,  a vector test, or a
+combination of both.
+
+Logic Expression as a Test Condition
+
+    A  logic expression  can be  used as  a test  condition. This
+expression  can  contain  scalar  and  vector variables and logic
+operators, including the parentheses.
+
+Examples: IF (/A) THEN
+	  IF (A+B*(A+/C)) THEN
+	  IF (A+VCTR_A[3]) THEN
+	  IF (VCTR_A[3:0] = #b1001) THEN   (2)
+
+    In  (2), a  vector test  is used  as the test condition. This
+logic expression  checks if the  vector is a  specific value. The
+value  can  be  expressed  in  any  radix,  as  long as it can be
+represented  by  the  vector.  In  (2),  VCTR_A[3:0] is tested to
+determine if it has a value of binary 1001; this is equivalent to
+the test condition:
+
+       IF (VCTR_A[3]*/VCTR_A[2]*/VCTR_A[1]*VCTR_A[0]) THEN
+
+    If the  vector test condition did not  include the equal sign
+and a value (as in: IF (VCTR_A[3:0]) THEN), then this is the same
+as logically ANDing every element in the vector, or
+
+	IF (VCTR_A[3]*VCTR_A[2]*VCTR_A[1]*VCTR_A[0]) THEN
+
+    Vector  test  conditions  can  be  mixed with other vector or
+scalar test conditions.  The following are some examples of mixed
+element logic test conditions:
+
+Example 1: IF ((VCTR_A[3:0] = #b1001)*/A + B) THEN
+	       .....
+	2: IF ((VCTR_A[0:3] = #hA)*(VCTR_B[3:0] = #o12)) THEN
+	       .....
+
+In example 2, each vector test must be enclosed in its own set of
+parentheses.
+
+
+	                          15
+    A vector  test condition  can be  performed by  concatenating
+scalar vectors and  testing for a  value. In example  (3), scalar
+variables A,B and VCTR_A[2]  are tested to determine if they have
+the value #b110.
+
+    Example:  IF (A,B,VCTR_A[2] = #B110) THEN    (3)
+
+    The  test condition must be  enclosed in parentheses, or else
+an error will be generated.
+
+
+
+
+
+3.2.3 CASE Statement
+
+    The  CASE   statement  is  similar  to  the  multiway  branch
+statement  provided  in  computer  programming  languages such as
+PASCAL and C. Depending on the value the CASE condition  variable
+takes, a different set of logic equations will be generated,
+
+    The CASE statement has the following format:
+
+      CASE (pin_vector)
+	BEGIN
+	 value0) [statement]
+	 value1) [statement]
+	 value2) [statement]
+	    :
+	    :
+	 valueN) [statement]
+	END;
+
+    The  pin_vector must be large  enough to represent the values
+VALUE0 to  VALUEN. For example,  if the pin  vector contained two
+elements,  then only  a maximum  of four  different values can be
+tested. The user can also specify a range of values  by using the
+':' and ',' symbols.
+
+Example: A CASE value range specification
+	 CASE (VCTR_A[3:0])        "(A)"
+	  BEGIN
+	    0:5,9)  BEGIN          "(B)"
+	            F = A*B;
+	            E = /A*C + B;
+	            END;
+	12,#b1111)  A_FLAG = 1;    "(C)"
+	  END; "end of CASE"
+
+
+	                          16
+    In  example  (A),  the  CASE  statement  is used to check the
+possible values of VCTR_A. The first values tested (B) are from 0
+to 5 and the decimal number 9. The second value set (C)  tests if
+VCTR_A[3:0]  is  equal  to  12  or  15 (specified in binary). Any
+number  radix  can  be  used  to  specify  the values, and a name
+defined as  a macro  constant in  the DEFINE  section can also be
+used as a CASE value.
+
+    The statement at  each variable value  can be a  single logic
+equation, a set of logic  equations (bracketed by BEGIN and END),
+an IF-THEN-ELSE, or another  CASE. There is no  default statement
+to handle values that are not specified.
+
+    Example 1: CASE (VCTR_A[3:0])
+	         BEGIN
+	            0 ) BEGIN
+	                VCTR_A[3:0] = 1;
+	                A_FLAG = 1;
+	                END;
+	            1 ) BEGIN
+	                VCTR_A[3:0] = 12;
+	                A_FLAG = 0;
+	                END;
+	            12) VCTR_A[3:0] = 0;
+	         END;  "end of case statement"
+
+    In  example 1, only three possible values for VCTR_A[3:0] are
+tested (0,1,12) and the corresponding logic statement(s) for each
+of the three values are listed.
+
+    The vector  used in  the CASE  condition can  be created from
+scalar elements. The concatenation operator ','  is used to group
+scalars and/or vectors together, as shown in the examples (a-c).
+
+    Example: CASE (A,B,C)
+	       BEGIN
+	         #B100) [statement]
+	            :
+	       END;
+
+    Example: CASE (A,VCTR_A[3:2],C)
+	       BEGIN
+	         #B1100) [statement]
+	            :
+	       END;
+
+    Example: CASE (VCTR_A[3:2],VCTR_B[3:2])
+	       BEGIN
+	         #B1101) [statement]
+	           :
+	       END;
+
+
+	                          17
+3.2.4 Defining State Machines
+
+    CASE  statements  are  useful  in  creating  sequential state
+machines. The vector variable specified in the CASE statement can
+be  considered the state indicators, with  the values in the CASE
+statement being the range of possible states the state indicators
+may  take.  Equations  and  state  transition  statements  can be
+written  for each  state to  control the  operation of  the state
+machine.
+
+    A  multi-mode  counter  is  an  example of a sequential state
+machine. By  defining two pins  as state registers  or indicators
+(these can  be defined  as a  vector), the  count sequence can be
+totally  customizable.  In  this  example,  the next state of the
+machine  at   any  count/state  is  determined   by  the  present
+count/state and the  mode bit MODE. If  the MODE bit is  UP, then
+the counter/state machine operates as an  up counter. If the MODE
+bit is DOWN, then the device operates as a down counter.
+
+Multi-Mode Counter Example:
+
+    DEFINE UP = 0,      "constant definitions for better"
+	   DOWN = 1;    "readability"
+
+    CASE (COUNT[1:0])   "4-bit up-down counter"
+      BEGIN
+      0) IF (MODE = UP) THEN
+	   COUNT[1:0] = 1;
+	 ELSE
+	   COUNT[1:0] = 3;
+	::::::
+      3) IF (MODE = UP) THEN
+	   COUNT[1:0] = 0;
+	 ELSE
+	   COUNT[1:0] = 2;
+      END;  "end of CASE statement"
+
+    NOTE: The use of CASE statements with large numbers of values
+to be tested will force the PLC compiler to consume all available
+memory.
+
+    Example: CASE (STATE[11:0])
+	        BEGIN
+	        0:1023) signal = 1;
+	          :::::::::
+	        END;
+
+    The  range 0:1023  will cause  the compiler  to generate 1024
+statements. This will most likely cause the program to run out of
+memory.
+
+	                          18
+3.3 Pin Polarities
+
+    Input and output signals can be defined as having active high
+or  active  low  polarities.  A  pin  is defined as active low by
+prefacing the pin name with the  '/' operator; if it is an output
+or  IO pin, then  include the definition  "ACTIVE_LOW" inside the
+parentheses.  The  "ACTIVE_HIGH"  definition  is added for active
+high/positive  polarity output/IO pins without the '/' symbol. An
+active low input or output pin or vector is defined as follows:
+
+    PIN   /A = 1 (input combinatorial)
+	  /B[3:0] = 2:5  (input combinatorial)
+	  /SIGNAL[3:0] = 14:17 (output registered active_low);
+
+    In this example, pins A and B[3:0] have been defined as input
+pins that are combinatorial and active low. The registered output
+pin vector SIGNAL[3:0]  has also been defined as  active low, but
+since  it is  an output,  the feature  "ACTIVE_LOW" must  also be
+included  in  the  architecture  definition.  These  architecture
+definitions  can be derived from the PLD database file or through
+the  header  generator  option  in  the  JM  program. The user is
+advised to use  the header generator program when  creating a new
+design file (See "Using  JM" Section 5.3). For PC  users, use the
+PLD program (Section 5.7). The  JM and PLD programs will simplify
+the definition of pin architectures, polarity and type.
+
+    After the pins have  been defined as active high  or low, the
+designer can use  these pins in  the logic specification  section
+without  regard to its  polarity. The absence  or presence of the
+complement operator '/' in  the logic specification section  will
+now refer to the pin variable being true or false.
+
+Example:  PIN   A = 1  (input combinatorial)
+	       /B = 2  (input combinatorial)
+	       /SIGNAL[3:0] = 14:17 (output combinatorial
+	                             active_low);
+	  BEGIN  "start logic specification section"
+	  IF (A*/B) THEN
+	    SIGNAL[3:0] = 12;
+	  ELSE
+	    SIGNAL[3:0] = 2;
+	      ::::::
+	  END.
+
+    The  output  vector  SIGNAL[3:0]  is  set  to 12 if the input
+variables A and  B are asserted (true) and  not asserted (false),
+respectively. If this condition is not true, then the SIGNAL[3:0]
+vector is set to 2.
+
+	                          19
+    In the  previous example, the test condition is true if input
+variable A is  active and variable B inactive. Note that there is
+no need to know whether the pin was defined active high or low.
+
+    To summarize: the PIN definition section defines the physical
+architecture of the pins.  The equations in the logic section are
+asserted/active  or not  asserted/inactive without  regard to how
+the pins were defined.
+
+Inverting Equations:
+
+    If an output variable/vector is prefaced by a complement  (/)
+operator  on the  left hand  side of  a logic  equation, then the
+right hand side of the logic equation is DeMorganized.
+
+    Example: IF (/A) THEN
+	        /SIGNAL[3:0] = /B*C;
+
+    In  this example,  the right  hand side  will be DeMorganized
+before assignment  to each element in  the vector SIGNAL[3:0]. In
+other words, the  resulting logic expression for  each element in
+the vector SIGNAL is:
+
+	               SIGNAL[3] = B + /C;
+	               SIGNAL[2] = B + /C;
+	               SIGNAL[1] = B + /C;
+	               SIGNAL[0] = B + /C;
+
+
+Positive Polarity Signals on Negative Polarity Outputs
+
+    A positive polarity signal can be represented with a negative
+polarity pin by defining  the output pin as active  high (without
+the '/' symbol) and explicitly DeMorganizing the equation  in the
+logic equation section.
+
+    This  may  be  necessary  if  the  only  available PLD to the
+designer does  not have  output polarity  control (i.e., polarity
+fuse  such as  on the  AmPAL22V10). For  example, the active high
+function  F(H)   =  A*B  can  be  implemented  on  a  PAL16L8  by
+complementing the function:
+
+    In the PLPL language:
+
+	 DEVICE a_design (P16L8)
+	 PIN  A = 1 (input combinatorial)
+	      B = 2 (input combinatorial)
+	      F = 15 (output active_low combinatorial);
+	 BEGIN
+	 /F = A*B;
+	 END.
+
+	                          20
+Note that the  architecture definition ACTIVE_LOW  in parentheses
+is still necessary because the pin is physically active low.
+
+The  result will be two product  terms, as shown in the following
+derivation:
+
+   /F(H) = /(A*B)
+    F(L) = /(A*B)
+    F(L) = /A + /B
+
+3.4 Special Product Term Functions
+
+    The PLPL language supports  special function product terms on
+PLD  pins.  RESET,  PRESET  and  ENABLE  are  examples of special
+functions for output pins. These product terms are used to reset,
+set,  and  enable  pins.  Newer  advanced  devices may have other
+control functions (e.g., OBSERVE on the PAL23S8).
+
+    The  special  functions  for  newer  PLDs  are  listed in the
+corresponding  PLD  database  file  and  are  preceded by the '!'
+symbol. PC users can use the PLD program to get a listing  of the
+functions  available  on  a  PLD.  Refer  to  Appendix A for more
+information.
+
+Usage
+
+    A special function consists of the function name followed  by
+parentheses.  Enclosed  in  the  parentheses  are the pins and/or
+vectors that are to be associated with the logic expressions used
+to define the special function product term.
+
+    For example, to  define the special function  product term(s)
+for a set of output vectors, write:
+
+    DEVICE a_design (P22V10)
+    PIN  MODE0 = 1 (input combinatorial)
+	 MODE1 = 2 (input combinatorial)
+	 A = 3 (input combinatorial)
+	 SIGNAL[3:0] = 14:17 (output registered active_high);
+
+    BEGIN
+    IF (/MODE0*/MODE1) THEN
+      ENABLE(SIGNAL[3:0]) = #b1111   (i)
+    IF (MODE0*/MODE1) THEN
+      RESET(SIGNAL[3]) = A;          (ii)
+    IF (MODE0*MODE1) THEN
+      PRESET(SIGNAL[3]);             (iii)
+	 :
+    END.
+
+	                          21
+    In  (i),  the  ENABLE  function  product term for each vector
+element is set to 1 (logic true)  when both mode inputs are high.
+In example (i), the enable function term for each element is  set
+to 1 because each bit  in the binary value #b1111  corresponds to
+one of the four vector elements. If the number '1' was used, then
+this  is equivalent  to #b0001,  which means  the enable term for
+SIGNAL[0] will be set to 1 and 0 for the other 3 vector elements.
+
+    The special  function product  terms can  also be  equated to
+logic expressions. In  (ii), the RESET function is active for the
+vector element SIGNAL[3] if  the test condition (MODE0*/MODE1) is
+true  and  the  variable  A  is  true.  If no logic expression is
+specified  (iii),  then  the  function  is  dependent on the test
+condition (MODE0*MODE1).
+
+If no test condition is specified:
+
+    BEGIN
+    ENABLE(SIGNAL[3:0]);
+     ...
+    END.
+
+then this  is equivalent  to ENABLE(SIGNAL[3:0])  = #b1111; where
+each variable enclosed in parentheses is assigned to the constant
+1.
+
+The function can also be defined  as a logic expression. (ii) can
+be written as: "RESET(SIGNAL[3]) = MODE0*/MODE1*A;".
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	                          22
+4   Generating Test Vectors
+
+    Test vectors are used  by PLD programmers or logic simulators
+to verify that the logic functions defined for a PLD are correct.
+These vectors  describe the  inputs to  the PLD  and the  outputs
+expected from the device after applying these inputs.
+
+    In  PLPL, these  test vectors  are listed  at the  end of the
+design  file.  These  vectors  are  processed  by the test vector
+generator program (TESTV) which then produces a JEDEC-format test
+vector file.
+
+4.1 Test Vector Format
+
+    DEVICE ....   ---|
+    PIN ....         |
+    BEGIN            |---- See PLPL Language section
+	             |
+    END.          ---|
+
+    TEST_VECTORS
+    [Pin Classification]
+    BEGIN
+    [Vectors]
+    END.
+
+    The user-defined test  vectors are attached  to the end  of a
+PLPL  language   file,  i.e.   after  the   "END.".  The  keyword
+TEST_VECTORS marks the  beginning of the vector  section. This is
+followed by a pin classification section which specifies the  pin
+types.  There are four  pin types: IN,  OUT, I_O, and BREG. These
+refer to input, output, input/output and  internal register pins,
+respectively.
+
+    The pin  names specified  in the  pin classification  section
+must  be already defined  in the PIN  definition section (see The
+PLPL Logic Language). The pin names must also be classified under
+the appropriate types (e.g.,  an input pin must be  classified as
+an input pin in the test vector section).
+
+	                          23
+Example: DEVICE Ex1 (PALxxxxx)
+	 PIN   A = 1 (input ...)
+	      /B = 2 (input ...)
+	      /C = 15 (io active_low ...)
+	       D = 16 (output ...)
+	      /E = 22 (breg actiev_low ...);
+	 BEGIN        "logic equation section"
+	     ::::
+	 END.
+	 TEST_VECTORS     "test vector section"
+	 IN A,B;
+	 I_O C;
+	 OUT D;
+	 BREG E;
+	 BEGIN
+	      :::::
+	 END.
+
+    The pins  A,B are  classified as  inputs, C  as I/O,  D as  a
+dedicated output pin,and  E as an internal register. This matches
+the PIN section. Note that the '/' symbols can be left out in the
+test vector section.
+
+    The pin classification section specifies the order with which
+the  user must specify the pin  values. This means that since the
+pin  order is  now A,B,C,D,  and E,  the values specified for the
+test vectors must also follow this order.
+
+Example: TEST_VECTORS
+	 IN A,B;
+	 I_O C;
+	 OUT D;
+	 BREG E;
+	 BEGIN
+    (1)  1 1 H L L;
+	 1 0 H H L;
+	 0 1 L L H;
+	 0 0 L H L;
+	 END.
+
+    In the first vector (1), the first value 1 is associated with
+pin A, next 1 with pin B, H with  pin C, L with pin D, and L with
+E. The vector is then terminated with a ';'.
+
+    If a  different pin order is required,  then the pin order in
+the pin classification section can be changed.
+
+	                          24
+Example: TEST_VECTORS
+	 OUT D;
+	 IN  A;
+	 I_O C;
+	 BREG E;
+	 IN  B;   "sections can be split up also"
+	 BEGIN
+	 L 1 L H 1;
+	 ::::
+	 END.
+
+
+Test Vector Values
+
+    The values a pin can take in a test vector are  determined by
+its pin type.  These values are  outlined in the  JEDEC standard.
+The following is the list of possible pin values:
+
+  0 - drive input low
+  1 - drive input high
+2-9 - drive input to super voltage #2 to 9 (for programming)
+  L - test output low
+  H - test output high
+  F - float input or output
+  Z - test input or output for high-impedance
+  C - drive input low, high, low     (i.e., clock)
+  K - drive input high, low, high
+  P - preload registers
+  B - preload buried/internal registers
+  N - power pins and output not tested
+  X - output not tested, use input default level
+
+    The default  level for unspecified pins  is a 0 or  L. In the
+test vector generator program TESTV, this can be set to a 1 or H.
+See the TESTV reference section.
+
+4.2 Pin Types
+
+    There are two types of pins: supply, and I/O pins.
+
+Supply Pins
+
+    These pins  are not  tested by  the PLD  programmer or  logic
+simulator.  These are the power and  ground pins. They should not
+be specified in the pin classification section.
+
+	                          25
+I/O Pins
+
+    I/O pins are dedicated input, output, clock,  or input/output
+pins. Control pins such  as dedicated enable pins (ex. AmPAL16R8)
+are  considered input  pins. The  values these  pins may take are
+listed below:
+
+	     Pin Type     Possible Test Vector Value
+	      input          0,1,2,3,4,5,6,7,8,9
+	                     F,Z
+	                     X,N
+	      output         L,H,F,Z
+	                     0,1 (*)
+	                     X,N
+	      clock          C,K,P
+	                     X,N
+	      input/output   (see input and output)
+
+
+(*) Output pins can take the values 0/1 when preloading
+    the output registers.
+
+
+
+Example: To test a 2-input AND function programmed into an
+	 AmPAL16R8 with the following PLPL definition:
+
+	 DEVICE AND_FUNCTION (P16R8)
+	     "Pin definition section"
+	 PIN  CLK1 = 1 (clock)
+	      A = 2 (input combinatorial)
+	      B = 3 (input combinatorial)
+	      ENB = 11 (control)
+	     /AND = 19 (registered output active_low);
+
+	 BEGIN
+	 AND = A*B;
+	 END.
+
+	 TEST_VECTORS
+	 IN  CLK1,ENB,A,B;   "pin classification section"
+	 OUT AND;
+	 BEGIN
+	 C 1  0 0 Z;
+	 C 0  0 1 L;
+	 C 0  1 0 L;
+	 C 0  1 1 H;
+	 END.
+	                           26
+    The JEDEC test vectors produced will be:
+
+	           V0001 C00XXXXXXN1XXXXXXXHN*
+	           V0002 C01XXXXXXN0XXXXXXXHN*
+	           V0003 C10XXXXXXN0XXXXXXXHN*
+	           V0004 C11XXXXXXN0XXXXXXXLN*
+	                 ^^^       ^       ^
+	           Pin   123      11      19
+
+    Note that the values for pin 19 are inverted. This is because
+the name AND in the pin classification section did not have a '/'
+as in the PIN definition section.  TESTV reverses the polarity of
+the  vector value  if the  pins do  not have the same definitions
+(one defined  with the '/'  and the other  without). If they have
+the same definition in both the pin classification and definition
+section (both  with or  without '/'),  the vector  values are not
+modified.
+
+    This capability  is useful because now the  user can think in
+terms of asserted/not  asserted or voltage levels. If the user is
+thinking of assertion levels, then the names are specified in the
+pin  classification section without  any '/'s. A  0/1 or L/H will
+mean  not   asserted  and   asserted  for   inputs  and  outputs,
+respectively. TESTV will  convert the 0/1s and  L/Hs by resolving
+any  polarity discrepancies in  both the pin  definition and test
+vector pin classification sections.
+
+Example: In  the  AND  function  example,  pin  19  (AND) is
+	 defined as active low in the PIN definition section
+	 but defined without the  '/' in the test vector pin
+	 classification section. The vector values specified
+	 now refer to AND being asserted (H) or not asserted
+	 (L). TESTV will automatically invert them.
+
+    If  the user wants to  think in terms of  voltages with a 0/1
+and L/H refering to the low and high voltages respectively,  then
+the names must match in both pin definition sections.
+
+Example: In the AND example, if pin AND were defined as /AND
+	 in the  pin classification  section, then  the test
+	 value  specified  for  AND  must  be the voltage or
+	 physical  level expected. This  means that when AND
+	 is asserted, an L is expected at the output, with H
+	 expected when AND is not asserted.
+
+    The  test  vectors  will  be  numbered  in  increasing  order
+(decimal) and will contain the number of vector values equivalent
+to  the physical number  of pins on  the device. In the preceding
+example,  all  pin   locations  on  the  AmPAL16R8   except  pins
+1,2,3,10,11,19, and  20 are specified as X or don't care. Pins 10
+and 20 are the power and GND pins (automatically set by the TESTV
+program) while  pins 1,2,3,11  and 19  were taken  from the  test
+vector specification.
+
+	                          27
+4.3 Power-Up Reset
+
+    AMD devices have the power-up reset feature. In a test vector
+sequence, any registered outputs in the first test vector will be
+assumed  reset.  The  output  at  the  pins  will  depend  on the
+circuitry in front of the register.
+
+Example: A PAL22V10, on power-up reset, will have the output
+	 pins LOW if the outputs have been defined as active
+	 high. If the output pins were defined as active low,
+	 then the outputs will be HIGH.
+
+The  power-up  reset  feature  for   PLDs  must  observe  certain
+requirements.  For example: monotonic  Vcc rise, and  no noise on
+the clock lines. Consult the datasheet for more details.
+
+4.4 Preloading Registers
+
+    A  typical  functional  test  sequence  for  registered/state
+machine   designs  would   be  to   verify  all   possible  state
+transitions.  AMD/MMI  PLDs  have  the  preload feature available
+which lets  the designer specify  any arbitrary present  state in
+the  registers.  This  simplifies  logic verification because any
+present  state value can  be forced into  the state indicators to
+test the next state transition.
+
+    Registers  can be preloaded  by putting the  'P' value on the
+clock pin controlling the registers.  This means that if a  clock
+pin controls a separate bank of registers, a 'P' should be placed
+there to preload that register bank. The value to be loaded  into
+the registers is then specified using 0 and 1, not L and H.
+
+Example: To preload  a PAL16R8 with  10010110; the following
+	 vector sequence is  used (note that the outputs are
+	 active low):
+
+    TEST_VECTORS
+    IN  CLK1,IN_A,IN_B;
+    OUT /out7,/out6,/out5,/out4,/out3,/out2,/out1,/out0;
+    BEGIN
+    C 0 1 XXXX XXXX;    "do one test"
+    P X X 1001 0110;    "preload reg with 10010110"
+    0 X X HLLH LHHL;    "test registers without clocking"
+    C 1 1 XXXX XXXX;    "do another test with preloaded reg"
+    END.
+
+	                          28
+    Consult the  datasheet for  the preload  characteristics of a
+PLD. The value preloaded into the registers of a P16R4/6/8 is the
+value measured at the  outputs. This means a 1 preloaded into the
+device  will appear  as a  H at  the output.  This means  a 0 was
+actually loaded into the register to  get a H at the output  (due
+to the inverting output buffer in front of the register).
+
+    Other  registered  devices  will  operate  differently.  On a
+PAL22V10, the register state is forced to the preloaded value  (a
+1 is loaded  as a 1 in  the register), but the  value measured at
+the  outputs  is  determined  by  the  polarity  selected  by the
+designer.
+
+    For preloading buried or internal registers  on a device like
+the AmPAL23S8, the keyword  LOAD_INTERNAL is used. A  sequence of
+0s and 1s follows which corresponds directly to the states of the
+6 internal registers.
+
+Example: The AmPAL23S8 is a 20-pin device. To preload the 6
+	 internal registers with '110100' write:
+
+    TEST_VECTORS
+    IN IN0,IN1,IN2;
+    OUT OUT0,OUT1,OUT2;
+    BEGIN
+    1 0 1 H L H;
+    1 1 1 H L Z;
+    LOAD_INTERNAL 1 1 0 1 0 0;
+    0 0 1 L H X;
+    0 1 1 L H X;
+    END.
+
+Note:
+
+(1) The preload vector values will be inverted (ie, 0 to 1) if
+    the variable declarations in the pin classification section
+    and the pin definition section are different.
+
+    Example:  DEVICE Ex2 (P22V10)
+	      PIN
+	           clk_line = 1 (clk_input)
+	          /out23 = 23 (output active_low registered);
+	      BEGIN "logic equation section"
+	           ....
+	      END.
+	      TEST_VECTORS
+	      IN  clk_line;
+	      OUT out23;  "declaration is different: no '/'"
+	      BEGIN
+	      C H;
+	      P 0; "the 0 will be inverted"
+	      END.
+	                        29
+(2) The preload value generated by TESTV (which may have been
+    inverted as described in (1)) will be the value that is
+    loaded into the register. The result at the output pins
+    depends on the polarity of the pin. If a 1 is preloaded into
+    an active low registered pin, a LOW voltage will be detected
+    at that pin.
+
+(3) The vector values specified with the LOAD_INTERNAL keyword
+    will not be inverted.
+
+(4) Test vector values may be grouped together if they are all
+    numbers or all alphabetic characters.
+
+    Example: TEST_VECTORS
+	     IN  IN0,IN1,IN2;
+	     OUT OUT0,OUT1,OUT2;
+	     BEGIN
+	     111 HHL;
+	     100 LHH;
+	     101 LHL;
+	     END.
+
+(5) Spaces can be used to separate the test vector values
+    (ex. '1 1 1 H H L').
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	                          30
+5   PLPL V2.2 Reference Manual
+
+The PLPL V2.2 package contains the following programs:
+
+Programs:
+  (1) PLC      = generi  (3) JM       = JEDEC map generator
+  (4) TESTV    = manual test vector generator
+  (5) SIM      = functional simulator
+  (6) PLPL     = menu/control program
+  (7) BPLPL    = PLPL batch program
+
+(For PC users, a pin utility program PLD.EXE is included)
+
+Text files:
+  (1) Pxxxxx = PLD database files for PLDs supported by PLPL
+  (2) Sxxxxx = PLD database files for the simulator
+  (3) $PLPLHLP.TXT = help text for the menu/control program
+  (4) $PLPLOPT.TXT = option file for the menu/control program
+  (5) $___PLD.CDE  = PLD programmer codes for PLDs supported
+	             by PLPL
+  (6) $_SEARCH.DBS = list of parts to search when trying to
+	             fit a PLPL design file
+
+5.1  PLC: The Programmable Logic Compiler
+
+    The  PLC logic  compiler compiles  an ASCII logic description
+file written in  the PLPL language  and produces an  intermediate
+file.  ASCII files can  be produced by  most text editors such as
+WORDSTAR (in  non-document mode). This intermediate  file is used
+by other PLPL modules.
+
+    To run PLC, type the  following command at the system  prompt
+(e.g.,A>)
+
+ A> plc -i filename [-o intermediate_filename]
+
+    -i filename
+	 ==> specifies the input filename
+    -o intermediate_filename
+	 ==> writes the compiled form to
+	     the file specified (optional)
+    -b
+	 ==> display the compilation results for every line
+
+    Any  error  messages  will  appear  on  the  display   during
+compilation.  The line in the  logic description file causing the
+error  will  be  printed  out   and  the  error  location  marked
+approximately  by an  arrow. The  user should  correct the errors
+generated in earlier lines before recompiling the file.
+
+    Any errors will be written to the temporary file $tmp.$$$.
+
+	                          31
+5.2 The Logic Optimizer
+
+    OPTIMIZE is  a logic  equation optimizer  that applies  logic
+reduction algorithms to the expressions in the intermediate file.
+This program  detects and  eliminates logic  redundancies in  the
+expressions.
+
+    The optimizer is called as follows:
+
+  A> optimize -i intermediate_filename [-o new_file]
+
+    -i intermediate_filename
+	   ==> An intermediate file is taken as
+	       an input
+
+    -o new_filename
+	   ==> the logically minimized file is written
+	       to the file with the specified name
+	       (optional)
+
+    The results of  logic optimization will  be displayed on  the
+monitor.
+
+
+
+	                          32
+5.3 JM: JEDEC Link/Fuse Map and Equation Listing Generator
+
+    JM takes  an intermediate  file, and  generates the link/fuse
+map for the targeted PLD. The link/fuse map generated conforms to
+the  standards set forth by the  JEDEC committee on May 1986. The
+intermediate  file  contains  the  logic  equations that are then
+converted into a pattern of 1s and 0s corresponding to the device
+links on a programmable logic device (PLD).
+
+    JM also performs the following functions:
+      - Provides documentation
+	 = lists equations in sum-of-products form using
+	   user-defined names
+	 = draws a DIP chip diagram
+	 = generates a table showing logic product term usage
+
+      - Concatenates an existing JEDEC map with a TESTV-generated
+	test vector file. The combined JEDEC map and test vector
+	file is used by most PLD programmers to do programming
+	and vector verification.
+
+      - Generate a new PLD design file header containing a
+	correct pin definition section. This menu-driven
+	function will display the available architectural
+	features for all the pins on a user-specified PLD.
+
+    JM will generate error messages for the following cases:
+
+    (1) Too many product terms (PTs) for a given output
+	 --> The output pin cannot handle the specified
+	     number of PTs. Use OPTIMIZE to remove any logic
+	     redundancies.
+	 --> The JM program will automatically attempt to
+	     reassign the output functions to pins which
+	     have a sufficient number of product terms. If
+	     the design cannot fit, then JM will prompt the
+	     user to specify a device, or it will search the
+	     file $_SEARCH.DBS for parts to fit this design in.
+
+    (2) Specifying nonexistent architecture features or functions
+	for a pin
+	--> check the device datasheet to determine the
+	    pin architecture features and available
+	    special functions
+
+    (3) Concatenating files that do not conform to the JEDEC
+	standard
+	--> make sure the files specified are generated by
+	    the JM program in PLPL or are in the JEDEC format.
+
+	                          33
+To run JM, type:
+
+A> jm -i intermediate_filename [-o map_filename]
+	                       [-l list_filename]
+	 or
+   jm  -a <device/fuse map file> <test vector file>
+	 or
+   jm -n
+
+    -i intermediate_filename
+	 ==> generate the device/fuse map
+	     from the equations in this file
+    -o map_filename
+	 ==> send the JEDEC map to the file
+	     specified (optional)
+    -l list_filename
+	 ==> list the logic equations with the
+	     user-specified variables into a file
+	     (optional)
+    -a <device/fuse map file> <test vector file>
+	 ==> first file name contains device/fuse map and
+	     second contains the JEDEC standard test vector
+	     file
+    -n   ==> used to create a new PLPL design file
+
+The device/fuse map will be  displayed on the screen. If the "-o"
+option is used, it will also be sent to the file specified.
+
+The "-a" or concatenate option  must be used by itself.  If other
+options like "-i" or "-o" are included with their arguments, they
+will be ignored.
+
+The "-n"  option must  also be  used by  itself when creating new
+design files.
+
+	                          34
+5.4  TESTV: JEDEC Standard Test Vector Generator
+
+    TESTV takes  a PLPL  language file  and searches  for a  test
+vector  section.  It  then  converts these user-specified vectors
+into a JEDEC format that can  be loaded into a PLD programmer for
+testing.
+
+It generates errors when:
+   (1) The user specifies a pin name that does not exist.
+   (2) The number of vectors does not match the number of
+       pins defined.
+   (3) Invalid test vector characters are specified for a
+       pin.
+
+To run TESTV, type:
+
+    A> testv -i filename [-o out filename] [-x]
+
+    -i filename
+	 ==> input file specification
+    -o out filename
+	 ==> file to write the test vectors
+	     to; this is an optional argument
+    -x
+	 ==> set don't care symbols to the logic value 1
+
+    Any vectors generated will be sent to the screen.
+
+
+	                          35
+5.5 SIM: Functional Simulator
+
+    The functional simulator SIM  is a multipurpose program  used
+to simulate and verify designs before programming a device.
+
+    The simulator recreates  the logic model from  the JEDEC fuse
+map.  This  model  is  then  stimulated  by the JEDEC-format test
+vectors which can  be in the  same JEDEC map  file. Discrepancies
+between the expected vector values and the computed output values
+are  flagged.  Any  PLD  design  package  which generates a JEDEC
+standard fuse map can use this simulator.
+
+    To run the simulator:
+
+      sim -i <JEDEC map> <test vector file>
+
+	 options: -o <simulator result file>
+	          -a
+	          -b <debug value #>
+	          -c <calculated test vector outputs>
+	          -f <JEDEC-to-Equations> <pin name file>
+	          -n
+	          -p <part to simulate>
+	          -q
+	          -w <waveform output file>
+	          -x
+
+The options are:
+
+    -o : Write the simulator results to a file
+    -a : Generate waveforms using ASCII characters. SIM
+	 normally uses PC character graphics characters.
+    -b : Debug the simulator
+	      => A debug value of 1 will list
+	         the state of every product term
+	         calculated by the simulator
+	      => A debug value of 200 will display
+	         any intermediate calculations caused by
+	         outputs feeding back into the device; this
+	         will usually catch oscillating functions.
+    -c : Calculates vector results
+	      => The designer can specify Xs (don't cares) in
+	         the test vectors and SIM will calculate the
+	         outputs. These computed outputs are then
+	         written to a file in the JEDEC vector format.
+
+    -f : Convert JEDEC maps to PLPL V2.2 files
+	      => Convert the JEDEC maps into sum-of-products
+	         logic equations. The designer can specify
+	         names for these pins. A Pin-Name file must be
+	         written using the following format:
+
+	      DESIGN_NAME
+	      PARTNAME
+	      NAME1 PIN_NO @
+	      NAME2 PIN_NO @
+	      ::::::::
+	      *
+
+	   The JEDEC-EQUATION feature will then use the
+	   names specified in this file. If a pin has not
+	   been assigned a name, then a default name
+	   "Pn_" will be used, where n is the pin number.
+    -n : Do not simulate. Used with the -f option to get
+	 the equations only.
+    -p : Part to simulate. Specify a simulator database file.
+	 Example: PAL22V10 file is S22V10.
+    -q : Quiet mode. Warning and non-fatal messages, such
+	 as input pins floating, are suppressed.
+    -w : Write waveform output to a file. If your printer does
+	 not support PC character graphics, use the "-a" option.
+    -x : Set the X/F/Z value to 1. Default is 0.
+
+In  addition, the  simulator also  handles 0-1-0  and 1-0-1 clock
+transitions.
+
+	                          36
+5.6 PLPL: Menu/Control Program
+
+    PLPL   is   a   menu-driven   program   that  simplifies  the
+user-interface with the PLPL design  package. It displays program
+choices  through  menus  and  prompts  the user for filenames. It
+generates  the appropriate  command line  to execute  the program
+(e.g., PLC)  so that the  user does not  have to type  in all the
+options discussed in the previous sections.
+
+    Three files are used to run PLPL: PLPL.EXE, $PLPLHLP.TXT, and
+$PLPLOPT.TXT.
+
+- PLPL.EXE is the control program. It generates the menus and
+  input prompts.
+- $PLPLHLP.TXT is an ASCII text file that contains information
+  on the various programs. To save disk space on the system,
+  this file can be left out if help information is not needed.
+- $PLPLOPT.TXT is another ASCII text file containing the various
+  options available for a program (PLC,JM,OPTIMIZE, or TESTV).
+  To save disk space this file can also be left out. The
+  user can type the command line to be executed.
+
+Three Menu Levels:
+
+    PLPL has three menu levels: MAIN, LEVEL2, and OPTION.
+
+MAIN Level:
+
+    The  menu  brought  up  on  the screen displays the available
+commands. The  user chooses  one of  these commands  to go to the
+LEVEL2 menu.
+
+LEVEL2:
+
+    On this level,  the user can  choose to execute  the program,
+select options for this program (if any), or cancel the command.
+
+OPTION Level:
+
+    If the user wants to select options for the program, the file
+$PLPLOPT.TXT must  be present  in the  user's current  directory.
+This  file  lists  the  options  available  for each PLPL command
+(e.g., compile). The user  then types an option and  PLPL prompts
+the user for any additional arguments.
+
+	                          37
+5.7 Using the PLD.EXE program (for PC users)
+
+    PLD.EXE is a PLPL  utility program that helps you  define the
+architecture  of pins on any  of the AMD PLDs.  Type "PLD" at the
+system prompt to run the program. There are two options: create a
+new PLPL V2.2 file, or update a PLPL V2.0 file.
+
+5.7.1 Creating a new PLPL V2.2 file
+
+    The program will ask you to enter a part name. Once  you have
+typed this in, the screen will show each pin (one at a time) with
+the following data: pin number, user-assigned pin name, pin type,
+polarity, any architecture features available, and  the number of
+product terms and the JEDEC fuse map location (if an output).
+
+Modifying the Pin Architecture
+
+    The last 4 lines on the screen show the  operations available
+to  modify  the  pin  architecture.  For example, by pressing the
+up/down  cursor keys,  you move  from pin  to pin. The left/right
+arrow  keys  position  the  cursor  at the available architecture
+features (such as registered or combinatorial).
+
+    By pressing the +/- keys with the cursor positioned at one of
+the  architecture  features,  the  PLD  program  will present any
+alternate  features. If  the feature  does not  change, then this
+means the architecture is fixed.
+
+Function Keys
+
+Seven functions keys on the PC are used by the PLD program:
+
+F1  : Change the pin name
+F2  : Change the pin polarity (if an architecture fuse exists,
+      then this change is reflected there)
+F3  : Change the pin type
+F4  : Show the available control functions for this pin.
+      Example: Each output pin on the AmPAL22V10 (P22V10)
+      has an individual enable function and shared reset and
+      preset PT functions.
+
+F5  : Write the data info shown on the screen to a file. This
+      file will contain all the information presented on the
+      screen, including a list of architecture features available
+      for the pin and their corresponding JEDEC map locations.
+F6  : Jump to a specified pin.
+F10 : File operations. Write the pin settings (in PLPL V2.2
+      format) to a file.
+
+
+
+	                          38
+The F10 function will produce a file in the following format:
+
+DEVICE filename (partname)
+PIN pinname0 = pinnumber0 (architecture features)
+    pinname1 = pinnumber1 (architecture features)
+     .....
+    pinnameN = pinnumberN (architecture features);
+
+BEGIN
+
+END.
+
+    The  <pinnameN>s  listed  will  be  those  that  the user has
+assigned names to. The user  can now type in the  logic equations
+in between the BEGIN and END keywords and then compile them using
+the PLPL design package.
+
+Warnings:
+
+ (1) When the pin polarity shows programmable (PRGRMBLE), set it
+     to either HIGH or LOW by typing the +/- keys.
+
+ (2) Define all the necessary control/function PTs (ENABLE,
+     RESET, PRESET, OBSERVE, etc.) to guarantee proper
+     operation; i.e., specify ENABLE "ON" for outputs that
+     are always on.
+
+5.7.2 Updating a PLPL V2.0 File
+
+    The user can use the PLD program to simplify  the updating of
+PLPL  V2.0  files.  V2.0  files  did  not  need  the architecture
+features  defined in  parentheses in  the pin definition section.
+These are now necessary in V2.1+.
+
+    The PLD  program will  prompt the  user for  a V2.0 filename.
+Once the V2.0 file has been loaded, the user can now step through
+each pin and set the available architecture features  as was done
+in 5.8.1.
+
+    When  you  have  completed  the  pin  settings,  write  these
+settings to a  file. Now use  your word processor  to connect the
+new pin settings to the old V2.0 file.
+
+	                          39
+Example: (Using WordStar)
+
+If the old PLPL  V2.0 file was called  DESIGN_1, and the new  pin
+settings were written to the file PINSET1, then edit DESIGN_1 via
+the following steps:
+
+   (1) Use WORDSTAR in nondocument mode
+   (2) Position the cursor at the very beginning of the file
+       (type ^QR)
+   (3) Add two to three blank lines at the top of the file
+   (4) Type ^KR
+   (5) Type PINSET1 at the program prompt.
+
+    The new pin  settings in PINSET1 will now be added to the top
+of  your  design  file.  Make  the  necessary  changes to put the
+program into PLPL V2.2 format before processing.
+
+
+
+
+
+
+	                          40
+Appendix A  The PLD Database
+
+    The AMD  PLDs supported  by PLPL  have numerous architectural
+features  and functions that make  PLDs popular in system design.
+PLPL V2.2 uses a PLD database that is composed of text files that
+have the format Pxxxxxx or Sxxxxxx, as  in P18P8 and S18P8. Files
+which begin with 'P' contain the architecture features, while the
+'S' files are used by the simulator.
+
+A.1 Architecture Features
+
+    'P'  files  contain  a  list  of  architecture  features in a
+device. To  determine the  architecture features  available for a
+pin,  look  for  the  pin  number,  and  then the '#' symbol. The
+following string  defines the  architecture feature  which can be
+put in parentheses in the pin definition section.
+
+Example: Pin 18 for the P22V10 is defined in the P22V10 file as
+
+    17 IO 26 27 1 0     "<-- pin 17 definition"
+     14 3696
+      1 3652 1 5764 1 0
+     # ACTIVE_LOW 5820 0 + ACTIVE_HIGH 5820 1
+     # REGISTERED 5821 0 + COMBINATORIAL 5821 1
+     @
+    18 IO 22 23 1 0     "<---!!! pin 18 definition"
+     16 2948
+      1 2904 1 5764 1 0
+     # ACTIVE_LOW 5818 0 + ACTIVE_HIGH 5818 1
+     # REGISTERED 5819 0 + COMBINATORIAL 5819 1
+     @                  "<----- end of pin 18 definition"
+    19 IO 18 19 1 0     "<-- begin pin 19 definition"
+     16 2200
+
+The strings ACTIVE_HIGH, ACTIVE_LOW, REGISTERED and COMBINATORIAL
+are the strings that specify the architecture features pin 18 may
+take.
+
+	 DEVICE a_sample (P22V10)
+	 Pin
+	      signal1 = 18 (IO active_high registered)
+
+A.2 Special Functions
+
+    PLD pins may have special functions associated with them. For
+example,  P22V10 has  an individual  enable product  term control
+function for each pin. In addition, global reset and preset terms
+are  also available.  To determine  if a  RESET, PRESET or ENABLE
+product term are  available for a pin, consult  the datasheet for
+the particular device.
+
+	                        42
+    To determine  other special  product term  functions, consult
+the  'P'  files  again.  Each  special  function term (other than
+ENABLE,  RESET,  and  PRESET)  is  prefaced  by  the  '!' symbol,
+followed by  the function name,  the number of  product terms for
+the  function,  and  the  starting  JEDEC address of the function
+product term.
+
+Example: The P23S8 has an OBSERVE function for the internal
+	 registers 26.
+
+	 26 BREG 18 10 11 1 1    "internal reg 26"
+	   6 920
+	   0   1 6118   1 6164
+	   # REGISTERED -1
+	   # ACTIVE_LOW -1
+	   ! OBSERVE 1 6072
+	   @  "<-- end of pin 26 definition"
+
+The name following the '!' symbol is used as the function name.
+
+     BEGIN
+     if (NO_OP * TEST_MODE) then
+	 OBSERVE(pin26) = 1;     "using the OBSERVE function"
+      :::::::
+     END.
+
+Hints: (1) Keep the PLD Handbook or datasheet handy when
+	   specifying the architecture definitions for a PLD.
+
+       (2) If a pin is defined as an IO pin, it can be defined
+	   as an INPUT or OUTPUT in the PIN definition section.
+
+       (3) If the IO pin is used as an input, then the enable
+	   product term must be explicitly disabled by writing
+	   ENABLE(pin_name) = 0; if an output or IO pin, then
+	   specify the enable function to control the
+	   activation of the output buffer.
+
+       (4) Consult the datasheet for the pin architecture
+	   diagram. Define the architecture features to get the
+	   desired pin configuration. For example, to define
+	   an IO pin on the P22V10 as as INPUT pin, the enable
+	   function must always be disabled, and the pin
+	   must be defined as a COMBINATORIAL pin. This is
+	   because the path from the pin to the inside of the
+	   PLD is controlled by a feedback multiplexer. This
+	   multiplexer must be set to select the combinatorial
+	   feedback path.
+
+       (5) When changing the polarity of an output pin, make
+	   sure that a polarity architecture fuse exists and
+	   that it is set/selected accordingly by defining the
+	   architecture feature name in the pin definition
+	   section.
+	                            43
+Appendix B: Using the Advanced PLD Features
+
+(1) Using the XOR Gate in the XRP Series of PLDs
+
+    To  use the XOR gate in  the XRP PLD series (e.g., P22XP10),
+use the XOR function provided:
+
+    pin20      =  inp1 * inp2 * inp3;           ( i)
+    xor(pin20) = /inp1 */inp2 +  /inp3 */inp4;  (ii)
+
+    The above statements will  force the 2 product  terms defined
+using  the XOR function (ii) to the XOR gate input with 2 product
+terms. The other PT (i) will be assigned to the group of 6 PTs on
+the other XOR gate input. Do not use the XOR (%) operator because
+the  compiler  will  convert  the  logic  expressions using the %
+operator into its sum of products form.
+
+Equation (ii) assigned    -----AND-|
+to this group of 2                 |-OR---|
+product terms             -----AND-|      \ \--\
+	                                   | |  |-XOR--> output
+Equation (i) assigned     -----AND-|      / /--/
+to this group of     (6 AND terms) |-OR---|
+6 product terms           -----AND-|
+
+(2) Internal registers on the AmPAL23S8
+
+    The internal registers on the PAL23S8 are numbered as pins 21
+through  26.  Pin  21  refers  to  the  internal reg connected to
+physical  output pin  13, while  pin 26  is connected  to pin 18.
+These must be defined as BREG and always ACTIVE_LOW.
+
+(3) AmPAL29M/MA16 Architecture/Control Fuses
+
+    There are at least 8 architecture fuses for the macrocells on
+the P29M/MA16. Some of the fuses are assigned feature names  line
+ACTIVE_HIGH or ACTIVE_LOW  while others are simply assigned names
+like S2_0 (set fuse S2 to 0) and  S2_1 (set S2 to 1). Consult the
+datasheet  for details as to  what feature each architecture fuse
+controls.
+
+(4) Using the Two-Feedback Macrocell on the AmPAL29M/MA16
+
+    The  two  feedbacks  on  8  macrocells  on  the P29M/MA16 are
+supported in PLPL  V2.2. These macrocells  are connected to  pins
+3,4,9,10,15,16,21  and 22. These  pins can be  used as regular IO
+macrocells, or as internal registers (as on the AmPAL23S8).
+
+	                      44
+Two-Feedback Macrocell as Regular IO Macrocell
+
+    There  are  pseudo-pin  numbers  associated  with  the 8 pins
+mentioned above. They are  numbered from 25 to 32.  Pseudo pin 25
+is  associated  with  pin  3  and  pseudo   pin  32 with 22. When
+defining  logic  equations  for  these  pins (3,4,..,22),  assign
+the equations to the pseudo pins.
+
+Example: The output of equation A = B*C + /B*/C is to
+	 appear at pin 3. A sample definition in
+	 PLPL V2.2 is:
+
+	 DEVICE design1 (P29M16)
+	 PIN  pseudoA = 3 (input combinatorial)
+	      pseudoB = 4 (input combinatorial)
+	     /pseudoC = 9 (input combinatorial)
+	      A = 25 (breg active_high registered ...)
+	      B = 26 (breg active_high combinatorial..)
+	     /C = 27 (breg active_low  registered ...);
+
+With this pin definition, the equation for A is written as:
+
+	          A = pseudoB*C + /pseudoB*/C;
+
+The  signal  PSEUDOB  is  used  instead  of B because we want the
+combinatorial version of  the signal B. The  P29M16 database file
+requires  that  an  equation  of  this form (mixed registered and
+combinatorial  signals  using  the  dual  feedback macrocells) be
+expressed this way because even though the signal was defined  as
+combinatorial (pin 26),  the correct feedback must  be taken from
+the combinatorial path connected to the pin pseudoB (refer to the
+PAL29M16 macrocell diagram). For registered feedback signals such
+as C, the name C is used in the above equation. Note that if C is
+defined  as active  low, then  the corresponding  pseudo pin must
+also be active low.
+
+    To  define   one  of  the  dual   feedback  macrocells  as  a
+registered/latched  cell,  specify  the  appropriate architecture
+fuses in the pseudo  pin. When writing test vectors for the part,
+specify the 0/1 states at the physical pin locations; specify the
+same test values  at the pseudo  pin locations also,  but use L's
+and  H's. For example: Pin 4 is  to be defined as an input latch.
+Define the architecture fuses in pin 4's pseudo pin (pin 26) such
+that  the macrocell  will be  an input  latch. When  writing test
+vectors, if a 0 is written for pin 4, then an L is written at pin
+26. Similarly, an  H is written at  pin 26 if a  1 is written for
+pin 4.
+
+	                        45
+Using the Dual Feedback Macrocell as an Internal Cell
+
+    The  dual  feedback  macrocell  can  be  used  as an internal
+register  by  disabling  the  output  driver  associated with the
+macrocell  (e.g.,  enable  is  programmed  as  always low). Logic
+equations  written for this  pin are assigned  to the pseudo pin.
+The physical pin associated with the macrocell can  still be used
+as  a combinatorial  input. It  is possible  to use  all the dual
+feedback macrocells  as internal registers (8  of them) and still
+have 8 combinatorial  inputs available. When used  as an internal
+register  and  a  combinatorial  input,  the  signals need not be
+defined with the same polarity.
+
+(5) Defining I/O Pins as Inputs
+
+    When  an  I/O  pin  on  a  device that does not have polarity
+control (e.g., pin 15 on  the AmPAL20L10) is defined as an input,
+the polarity  keywords (ACTIVE_HIGH  and ACTIVE_LOW)  must not be
+used.
+
+    For example: Pin 15 on the P20L10 is defined  as active high.
+The pin should be defined as:
+
+    PIN name_x = 15 (input combinatorial)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	                             46

@@ -1,0 +1,807 @@
+
+
+
+	                       Am29PL1XX SIMULATOR
+
+
+	3.1  OVERVIEW
+
+	The  Am29PL1XX  Simulator and the  Am29PL1XX  Assembler   provide
+	complete high level software support for  the Am29PL1XX  devices.
+	Both  software packages support the Am29PL141,  the Am29PL142 and
+	the Am29PL131.
+
+
+	3.1.1  SIMULATOR FEATURES
+
+	The   Am29PL1XX   simulator  provides  high   level   interactive
+	simulation capability for the Am29PL1XX microprograms. Along with
+	the  Assembler,  it helps to verify Am29PL1XX designs  completely
+	before a device is programmed. The simulator  supports functional
+	simulation only. It does not provide any timing simulation.
+
+	The  Am29PL1XX simulator uses the Jedec fuse map file  (generated
+	by the Am29PL1XX Assembler) and a test-vector file as its  inputs
+	(Figure  3-1). Based  upon the contents of the Jedec fuse map and
+	the test vector file,  it generates "computed output signals" and
+	compares these against expected output values as specified in the
+	test   vector  file  or  interactively  by  the  user.   If   any
+	differences are detected, it flags the errors by displaying a "?"
+	under the unmatched output signals.
+
+
+	3.1.2  Am29PL1XX SIMULATOR DISTINCTIVE CHARACTERISTICS
+
+	  - Allows the user to preload or change all internal registers
+	    (interactively)
+
+	  - Displays complete status information including all input
+	    pin signals, computed and expected output signals, contents
+	    of all internal registers
+
+	  - Break point capability
+
+	  - Single step capability
+
+	  - Default values for test vectors
+
+	  - Interactive mode of operation
+
+	  - Another program can be executed during simulation
+
+
+
+	3-1
+
+
+	                                   _________
+	                                  |  USER   |
+	                                  |_________|
+	                                       |
+	                                   ____|____
+	    __________                    | SYSTEM  |
+	   | DATABASE |                   | EDITOR  |
+	   |__________|                   |_________|
+	        |                            |   |
+	        |              ______________|   |
+	        |      _______|_______    _______|_______
+	        |     |   ASSEMBLER   |  |  TEST VECTOR  |
+	        |     |  INPUT FILE   |  |  INPUT FILE   |
+	        |     |_______________|  |_______________|
+	        |             |                  |
+	        |      _______|_______           |
+	        |     |   Am29PL1XX   |          |
+	        |_____|   ASSEMBLER   |          |
+	              |_______________|          |
+	                      |                  |
+	         _____________|_______________   |____________
+	        |             |               |              |
+	   _____|____    _____|_____     _____|______        |
+	  |  ERROR   |  |  PROM BIT |   | JEDEC FUSE |       |
+	  |  FILE    |  |  PATTERN  |   |    MAP     |       |
+	  |__________|  |___________|   |____________|       |
+	                                      |              |
+	                                      |              |
+	                      ________________|_________     |
+	                     |                          |    |
+	                     |                          |    |
+	            _________|___________     __________|____|________
+	           |       PROM          |   |                       |
+	           |    PROGRAMMER       |   |      SIMULATOR        |
+	           |_____________________|   |_______________________|
+
+
+
+	              Figure 3-1.  Simulator/Test Vector Environment
+
+
+
+
+
+
+
+	3-2
+
+
+	3.1.3  SIMULATOR REQUIREMENTS
+
+	The following steps are required to run the simulator:
+
+	A.   Write and Assemble a microprogram source file
+
+	     Write   a  micro-program  using  the   Am29PL1XX   Assembler
+	     language.   Then use the Am29PL1XX Assembler to assemble the
+	     program.   The  Assembler  will generate  the  corresponding
+	     Jedec fuse map file to be used by the simulator.   Refer  to
+	     the  assembler documentation for details about  writing  and
+	     assembling a micro-program.
+
+	B.  Create Test Vectors File
+
+	     The test vectors file can be written in a symbolic  format.
+
+	     Keeping  microprogram source and test vector files  separate
+	     allows  one simulation model to have a set of different test
+	     vector files.
+
+	C. Execute simulation
+
+	     After  the source program is assembled and the test  vectors
+	     file has been generated, the simulator is ready to run.  The
+	     details  of  running the simulator are presented in  Section
+	     3.3.
+
+	     The  simulator  model is designed to reflect  the  Am29PL1XX
+	     device  as much as possible.   Initially applying a software
+	     asserted  RESET  signal  to the simulator  is  the  same  as
+	     applying  a  RESET  to the Am29PL1XX device.
+
+	     Please  note,  that Am29PL1XX simulator provides  functional
+	     simulation  only  - no  timing  simulation.   The  simulator
+	     assumes 0 propagation delay.   However, the clock pulse must
+	     be specified as one of the inputs in the test vectors to get
+	     register transfers and to compute outputs.
+
+
+
+	3-3
+
+
+	3.2  TEST VECTORS INPUT FILE FORMAT
+
+	3.2.1  INTRODUCTION
+
+	This  section  describes the format for the  test  vectors  input
+	file created by the user using a text editor.
+
+	The  test vectors file enables the user to easily specify his own
+	set of test vectors to verify his microprogram design.
+
+
+	3.2.2  TEST VECTORS FILE SYNTAX
+
+	The test vectors file has the following format:
+
+	         _____________________________________
+	        |                                     |
+	        |                                     |
+	        |          [Table heading]            |
+	        |                                     |
+	        |  PIN                                |
+	        |         Pin declaration             |
+	        |         ;                           |
+	        |                                     |
+	        |  VECTORS                            |
+	        |                                     |
+	        |         IN Input pin names  ;       |
+	        |         OUT Output pin names ;      |
+	        |                                     |
+	        |  BEGIN                              |
+	        |                                     |
+	        |         Test vectors                |
+	        |                                     |
+	        |  END.                               |
+	        |                                     |
+	        |_____________________________________|
+
+
+	KEYWORDS have to be in all CAPS.
+
+	Table Heading:  The heading comprises the first arbitrary  number
+	of lines before the keyword "PIN".   The table heading allows for
+	design documentation.
+
+
+	3-4
+
+	Pin Declaration:  The purpose of pin declarations is to let users
+	specify  symbolic  names for device pins,  so  that  user-defined
+	identifiers  can be equated to physical device pins.   The  first
+	five characters of the specified name are displayed vertically on
+	the simulation screen.
+
+	The  pin  declaration  begins  with  the  keyword  "PIN"  and  is
+	terminated  with  a semicolon.   All the pin  assignments  appear
+	within  the keyword PIN and the semicolon.   Note that it is  not
+	necessary  to specify every single device pin.  Only  those  pins
+	being used in the design need be specified.
+
+	The syntax for a single pin assignment is as follows:
+	                 pin_name = pin_number
+	                 Example :  CLK = 27
+
+
+	Vector Table Body:  The vector table body begins with the keyword
+	"VECTORS".  A  list  of signal declarations follows  the  keyword
+	VECTORS.     This   list  specifies that all signals in the  test
+	vector  body  be identified in the same sequence as  they  appear
+	in   this  list.    The simulator will identify and  display  the
+	vectors  according  to the order in which the names are given  in
+	this list.
+
+	There  are  two fields in this signal declaration list:   IN  and
+	OUT.  The IN field contains the input signals to the device.  The
+	OUT field contains the output signals of the device.  The signals
+	are  displayed in the simulation screen display in the  order  in
+	which  they are listed in the the IN and OUT fields.   Figure 3-2
+	shows the IN and OUT declarations.   (Refer to Figure 3-3 for the
+	resulting simulation display.)
+
+	Note  that  the  signal names in the IN and OUT  fields  MUST  be
+	identical  to  the names in the PIN  declaration.  The  order  of
+	signals  specified  may  be different from the  PIN  declaration.
+	Also,  it  is  not necessary to specify every pin  from  the  PIN
+	declaration.  However,  every  signal specified in the IN and OUT
+	fields MUST appear in the same order in each of the test vectors.
+
+	3-5
+
+	Test  Vector Format:   The test vectors are embodied between  the
+	keyword  "BEGIN"  and "END.".   Each test vector  starts  with  a
+	vector number and ends with a  semicolon.   The vector number can
+	be any decimal integer with 4 or fewer digits.
+
+	The test vectors must contain only valid JEDEC test conditions:
+
+	            0 - drive input low
+	            1 - drive input high
+	            C - clock
+	            N - outputs not tested
+	            L - test output for low
+	            H - test output for high
+	            Z - test output for high impedance
+	            X - don't care
+
+	There is a direct one to one correspondence between each entry in
+	a  test  vector and the pin signal within the test vector  table.
+	For  example,  in Figure 3-2,  the first signal 'C' in  the  test
+	vector table body corresponds to the CLOCK input signal while the
+	second  test  signal bit corresponds to the  RESET  signal.   The
+	simulator  maps  the  test signals to  their  corresponding  pre-
+	defined  pin locations.   The test vector signals must be in  the
+	same  order  as the listing of pins in the "IN" and  "OUT"  list.
+	The printout is also in this order.
+
+	The  signals not included in the "IN" and "OUT" list are  treated
+	as don't cares (i.e. 'X') in the JEDEC format.  There is a direct
+	one  to one correspondence between each test signal and the  "IN"
+	and "OUT" list.
+
+	Fig 3-2 is an example of a complete test vectors file.
+
+	3-6
+
+	HEADER (PL142)
+
+	PIN     tst6 = 1        o0 = 2          o1 = 3
+	        o2 = 4          o3 = 5          o4 = 6
+	        o5 = 7          o6 = 8          o7 = 9
+	        o8 = 10         o9 = 11         o10 = 12
+	        o11 = 13        o12 = 15        o13 = 16
+	        o14 = 17        o15 = 18        /reset = 19
+	        tst5 = 20       tst4 = 21       tst3 = 22
+	        tst2 = 23       tst1 = 24       tst0 = 25
+	        cc = 26         clk = 27;
+	        clk = 27;
+
+	VECTORS
+
+	IN      clk /reset tst6 tst5 tst4 tst3 tst2 tst1 tst0 cc ;
+	OUT     o15 o14 o13 o12 o11 o10 o9 o8 o7 o6 o5 o4 ;
+
+	BEGIN
+	"          /  ttttttt                     "
+	"       c  r  sssssss   oooo oo           "
+	"       l  e  ttttttt   [[[[ [[oo oooo    "
+	"       o  s  [[[[[[[   1111 11[[ [[[[    "
+	"       c  e  6543210c  5432 1098 7654    "
+	"       k  t  ]]]]]]]c  ]]]] ]]]] ]]]]    "
+	"                                         "
+	"                                         "
+	0       C  0  XXXXXXXX  XXXX XXXX XXXX ;
+	1       C  1  00100101  XXXX XXXX XXXX ;
+	2       C  1  XXXXX0XX  LHHH HHHH LHHH ;
+	3       C  1  00100001  LLLH LLHL LLLH ;
+	4       C  1  XXXXXXX1  LLLH LLHH LLLH ;
+	5       C  1  01001001  LLLH LLLL LLLH ;
+	6       C  1  1XXXXXXX  LLLH LLLH LLLH ;
+	7       C  1  1XXXXXXX  LLLH LHLL LLHL ;
+	8       C  1  XXXXXXXX  LLHL LHLL LLHL ;
+	9       C  1  XXXXXXXX  LLHL LHLL LLHL ;
+	END.
+
+	       Figure 3-2.  Example of input test vectors file
+
+	3-7
+
+	3.3  EXECUTING SIMULATIONS
+
+	3.3.1  INVOCATION COMMAND OPTIONS AVAILABLE
+
+	This  section describes the options which can be supplied to  the
+	simulator  in  the  invocation  command.    Option  switches  are
+	prefaced with  a minus "-" character.    Options can be specified
+	in  upper case or lower case characters.   Some options require a
+	parameter.   The  parameter  following the option  flag  must  be
+	typed.  The order of  appearance of options is not significant as
+	long  as  they  are situated  between  the command name  and  the
+	JEDEC  fuse  map  file name.   On typing in SIM14X in the command
+	line, a list of the command line options appears on the screen:
+
+	Usage:
+	       sim14x [-esr] [-b val] [-x val] [-o outfile]
+	                  [-p val] -n testfile jedfile
+
+	           -e      Suppress output to CRT
+	           -s      Suppress single step mode
+	           -r      Suppress displaying internal registers
+	           -b      Set break point (value can be a Decimal
+	                   number or a Hex number or ERR for break
+	                   on error)
+	           -x      Set default value for X in test vectors
+	                   (value can be 0 or 1)
+	           -o      Specify an output file name
+	           -p      Preload internal registers (Any of the
+	                   internal registers can be loaded as follows:
+	                       CREG -- c val       SREG -- s val
+	                       TOS  -- t val       BOS  -- b val
+	                       PC   -- p val       EQ   -- e val
+	                    val can be a Decimal number or a Hex number.
+	                    For EQ, val is 0 or 1)
+	           -n      Specify input test vector file
+	         jedfile   Sepcify jedec fusemap file
+
+
+	Note  that for breakpoints,  program execution breaks  one  cycle
+	before  the  microword at the breakpoint  address  specified   is
+	loaded into the pipeline register.
+
+	Within  the -p option,  s val is valid only for the Am29pl141 and
+	the  Am29pl131,  whereas t val and b val are valid only  for  the
+	Am29pl142.
+
+	3-8
+
+	Some  examples  of  simulation command  lines  which  demonstrate
+	correct invocation syntax are:
+
+	    sim14X   -sr -n cnta cntr.jed
+	    sim14X   -n cnta  cntr.jed
+	    sim14X   -es  -o tmpfile  -x 0 -r -n cnta cntr.jed
+	    sim14X   -esr   -n cnt  cntr.jed
+	    sim14X   -p p21   -o tmpfile -n cnt  cntr.jed
+	    sim14X   -p p0   -p c63   -p s0  -n cnt  cntr.jed
+
+
+
+
+	3.3.2  SIMULATOR OUTPUT
+
+	After  each  test vector is simulated,  the simulator  outputs  a
+	snapshot.   The  output  snapshot  contains  the  result  of  the
+	simulation  for the test vector,  the test vector input with  pin
+	number  and  pin  name,  and a vector number of the  vector  last
+	fetched.   Each vector number with an initial character of "V" is
+	a vector fetched from the test vector file.
+
+	The  contents of internal registers are also displayed.   If  the
+	single step mode is not suppressed, the simulator will prompt the
+	user for commands by displaying "! ".  The user can either  enter
+	commands  or press <CR> to continue the  simulation.   Among  the
+	commands  is a help command "H" which,  when invoked,  shows  all
+	available commands to the user.   An example of simulation output
+	is shown in Figure 3-3.
+
+	The  test vector number "V0000" appears on the upper left  corner
+	of  Figure 3-3.   This means that the test vector "V0000" in  the
+	test  vector  file was used as the input.    The  vector  numbers
+	preceded  by a 'V' are the same as the vector numbers fetched  by
+	the simulator from the test vectors file.
+
+	The   first  line displays the vector number and the  "INPUT" and
+	"OUTPUT"  column  titles.    The next five lines give   the   pin
+	names  displayed vertically.   Shown below the pin names are  pin
+	numbers.   The pin names and numbers appear in the order they are
+	specified  in the "IN" and "OUT"  lists of the test vectors file.
+	Refer to Section 3.2.   Below the pin numbers is the test  vector
+	given  to the simulator.    Below the test vector are the  output
+	signals  computed  by  the  simulator.   If  the  user  specifies
+	expected output signals ('H' or 'L'),  the simulator compares the
+	expected  output  signals  with the computed output  signals  and
+	shows any unmatched signals by displaying '?' under them.
+
+	3-9
+
+	Unless   users   specify  the  "-r"  option  when  invoking   the
+	simulator,   the simulator displays the contents of all  internal
+	registers,  OPCODE  mnemonics  of the current OPCODE field in the
+	pipeline  register,  and  the source of the contents of  pipeline
+	register.    Also  displayed for the instruction in the  pipeline
+	register,  are  the value of the condition being tested,  whether
+	the instruction will pass or fail and T*M,  wherever  applicable.
+	For CREG,  SREG,   PC,  and DATA field of pipeline register, both
+	decimal and hexadecimal  values are displayed.    The hexadecimal
+	values  are displayed below their decimal values.  For the number
+	representations, please see Section 3.3.6.
+
+	It is important to remember that all inputs, outputs and register
+	values displayed in an output screen are values at a rising clock
+	edge.  Each  "carriage  return" in the single step  mode  can  be
+	thought of as a rising clock edge.
+
+	The  simulator  output file shown in Figure 3-3 is the result  of
+	running  the file shown in Figure 3-2 along with a related  Jedec
+	map  for  the  Am29pl142.  In the first test  (V0000),  reset  is
+	asserted.  The  reset  input  and  all the  test  inputs  of  the
+	Am29pl142 are registered.  This needs to be accounted for in  the
+	test vectors. The outputs in V0000 are unknowns. Reset is clocked
+	into the register at this time.
+
+	In  V0001,  the branch address (12#h) and test condition for  the
+	GOTOTM  instruction at address 7F#h,  are clocked into the  part.
+	Also, the contents of location 7F#h are clocked into the pipeline
+	register. The ouputs are still unknown.
+
+	In  V0002,  the  test  condition   for the PSHPL  instruction  at
+	address 12#h is clocked into the part.  At this time the  outputs
+	from  the  pipeline register are the contents of  location  7F#h.
+	This continues until the last vector.
+
+	3-10
+
+    ----------------------------------------------------------------------
+    V0000           INPUT              |             OUTPUT
+	     /                         |
+	     r  t t  t  t  t  t  t     |
+    Pin   c  e  s s  s  s  s  s  s     | o  o  o  o  o  o
+    Name: l  s  t t  t  t  t  t  t  c  | 1  1  1  1  1  1  o  o  o o o o
+	  k  e  6 5  4  3  2  1  0  c  | 5  4  3  2  1  0  9  8  7 6 5 4
+	                               |
+    Pin#: 27 19 1 20 21 22 23 24 25 26 | 18 17 16 15 13 12 11 10 9 8 7 6
+    Vect: C  0  X X  X  X  X  X  X  X  | X  X  X  X  X  X  X  X  X X X X
+    Comp:                              | X  X  X  X  X  X  X  X  X X X X
+
+    CREG = ***,  TOS = ***,    BOS = ***,   PC = ***,   EQ = *
+
+
+    Pipeline :   ***
+
+
+    Mnemonics:   ***
+
+    Current PL contents are undefined
+
+    ----------------------------------------------------------------------
+    V0001           INPUT              |             OUTPUT
+	     /                         |
+	     r  t t  t  t  t  t  t     |
+    Pin   c  e  s s  s  s  s  s  s     | o  o  o  o  o  o
+    Name: l  s  t t  t  t  t  t  t  c  | 1  1  1  1  1  1  o  o  o o o o
+	  k  e  6 5  4  3  2  1  0  c  | 5  4  3  2  1  0  9  8  7 6 5 4
+	                               |
+    Pin#: 27 19 1 20 21 22 23 24 25 26 | 18 17 16 15 13 12 11 10 9 8 7 6
+    Vect: C  1  0 0  1  0  0  1  0  1  | X  X  X  X  X  X  X  X  X X X X
+    Comp:                              | X  X  X  X  X  X  X  X  X X X X
+
+    CREG = ***,  TOS = ***,    BOS = ***,   PC = ***,   EQ = *
+
+
+    Pipeline :   ***
+
+
+    Mnemonics:   ***
+
+    Current PL contents are undefined
+
+	3-11
+
+    ---------------------------------------------------------------------
+    V0002           INPUT              |             OUTPUT
+	     /                         |
+	     r  t t  t  t  t  t  t     |
+    Pin   c  e  s s  s  s  s  s  s     | o  o  o  o  o  o
+    Name: l  s  t t  t  t  t  t  t  c  | 1  1  1  1  1  1  o  o  o o o o
+	  k  e  6 5  4  3  2  1  0  c  | 5  4  3  2  1  0  9  8  7 6 5 4
+	                               |
+    Pin#: 27 19 1 20 21 22 23 24 25 26 | 18 17 16 15 13 12 11 10 9 8 7 6
+    Vect: C  1  X X  X  X  X  0  X  X  | L  H  H  H  H  H  H  H  L H H H
+    Comp:                              | L  H  H  H  H  H  H  H  L H H H
+
+    CREG = ***,  TOS = ***,    BOS = ***,   PC = 127,   EQ = 0
+	                                         7F#H
+
+    Pipeline :   OE   OPCODE   POL   TEST   DATA     OUTPUTS
+	         1    1F#H     0      7     127      0111111101111111#B
+	                                    7F#H     7F7F#H
+    Mnemonics:   GOTOTM, IF (cond) THEN GOTO TM(data)
+    Condition PASS, TEST cc = 1, T[6:0] = 12#H, T*M = 12#H
+    Current PL contents loaded from ROM address 127
+
+    --------------------------------------------------------------------
+    V0003           INPUT              |             OUTPUT
+	     /                         |
+	     r  t t  t  t  t  t  t     |
+    Pin   c  e  s s  s  s  s  s  s     | o  o  o  o  o  o
+    Name: l  s  t t  t  t  t  t  t  c  | 1  1  1  1  1  1  o  o  o o o o
+	  k  e  6 5  4  3  2  1  0  c  | 5  4  3  2  1  0  9  8  7 6 5 4
+	                               |
+    Pin#: 27 19 1 20 21 22 23 24 25 26 | 18 17 16 15 13 12 11 10 9 8 7 6
+    Vect: C  1  0 0  1  0  0  0  0  1  | L  L  L  H  L  L  H  L  L L L H
+    Comp:                              | L  L  L  H  L  L  H  L  L L L H
+
+    CREG = ***,  TOS = ***,    BOS = ***,   PC =  18,   EQ = 0
+	                                         12#H
+
+    Pipeline :   OE   OPCODE   POL   TEST   DATA     OUTPUTS
+	         1    14#H     1      1       3      0001001000010010#B
+	                                    03#H     1212#H
+    Mnemonics:   PSHPL, IF (cond) THEN PUSH,LOAD PL(data)
+    Condition PASS, TEST tst1 = 0
+    Current PL contents loaded from ROM address 18
+
+	3-12
+
+    --------------------------------------------------------------------
+    V0004           INPUT              |             OUTPUT
+	     /                         |
+	     r  t t  t  t  t  t  t     |
+    Pin   c  e  s s  s  s  s  s  s     | o  o  o  o  o  o
+    Name: l  s  t t  t  t  t  t  t  c  | 1  1  1  1  1  1  o  o  o o o o
+	  k  e  6 5  4  3  2  1  0  c  | 5  4  3  2  1  0  9  8  7 6 5 4
+	                               |
+    Pin#: 27 19 1 20 21 22 23 24 25 26 | 18 17 16 15 13 12 11 10 9 8 7 6
+    Vect: C  1  X X  X  X  X  X  X  1  | L  L  L  H  L  L  H  H  L L L H
+    Comp:                              | L  L  L  H  L  L  H  H  L L L H
+
+    CREG =   3,  TOS =  19,    BOS = ***,   PC =  19,   EQ = 0
+	   03#H        13#H                      13#H
+
+    Pipeline :   OE   OPCODE   POL   TEST   DATA     OUTPUTS
+	         1    1F#H     0      7     127      0001001100010011#B
+	                                    7F#H     1313#H
+    Mnemonics:   GOTOTM, IF (cond) THEN GOTO TM(data)
+    Condition PASS, TEST cc = 1, T[6:0] = 10#H, T*M = 10#H
+    Current PL contents loaded from ROM address 19
+
+    --------------------------------------------------------------------
+    V0005           INPUT              |             OUTPUT
+	     /                         |
+	     r  t t  t  t  t  t  t     |
+    Pin   c  e  s s  s  s  s  s  s     | o  o  o  o  o  o
+    Name: l  s  t t  t  t  t  t  t  c  | 1  1  1  1  1  1  o  o  o o o o
+	  k  e  6 5  4  3  2  1  0  c  | 5  4  3  2  1  0  9  8  7 6 5 4
+	                               |
+    Pin#: 27 19 1 20 21 22 23 24 25 26 | 18 17 16 15 13 12 11 10 9 8 7 6
+    Vect: C  1  0 1  0  0  1  0  0  1  | L  L  L  H  L  L  L  L  L L L H
+    Comp:                              | L  L  L  H  L  L  L  L  L L L H
+
+    CREG =   3,  TOS =  19,    BOS = ***,   PC =  16,   EQ = 0
+	   03#H        13#H                      10#H
+
+    Pipeline :   OE   OPCODE   POL   TEST   DATA     OUTPUTS
+	         1    15#H     0      7     127      0001000000010000#B
+	                                    7F#H     1010#H
+    Mnemonics:   PSH, IF (cond) THEN PUSH
+    Condition PASS, TEST cc = 1
+    Current PL contents loaded from ROM address 16
+
+	3-13
+
+    -------------------------------------------------------------------
+    V0006           INPUT              |             OUTPUT
+	     /                         |
+	     r  t t  t  t  t  t  t     |
+    Pin   c  e  s s  s  s  s  s  s     | o  o  o  o  o  o
+    Name: l  s  t t  t  t  t  t  t  c  | 1  1  1  1  1  1  o  o  o o o o
+	  k  e  6 5  4  3  2  1  0  c  | 5  4  3  2  1  0  9  8  7 6 5 4
+	                               |
+    Pin#: 27 19 1 20 21 22 23 24 25 26 | 18 17 16 15 13 12 11 10 9 8 7 6
+    Vect: C  1  1 X  X  X  X  X  X  X  | L  L  L  H  L  L  L  H  L L L H
+    Comp:                              | L  L  L  H  L  L  L  H  L L L H
+
+    CREG =   3,  TOS =  17,    BOS =  19,   PC =  17,   EQ = 0
+	   03#H        11#H          13#H        11#H
+
+    Pipeline :   OE   OPCODE   POL   TEST   DATA     OUTPUTS
+	         1    1F#H     0      7     127      0001000100010001#B
+	                                    7F#H     1111#H
+    Mnemonics:   GOTOTM, IF (cond) THEN GOTO TM(data)
+    Condition PASS, TEST cc = 1, T[6:0] = 24#H, T*M = 24#H
+    Current PL contents loaded from ROM address 17
+
+    --------------------------------------------------------------------
+    V0007           INPUT              |             OUTPUT
+	     /                         |
+	     r  t t  t  t  t  t  t     |
+    Pin   c  e  s s  s  s  s  s  s     | o  o  o  o  o  o
+    Name: l  s  t t  t  t  t  t  t  c  | 1  1  1  1  1  1  o  o  o o o o
+	  k  e  6 5  4  3  2  1  0  c  | 5  4  3  2  1  0  9  8  7 6 5 4
+	                               |
+    Pin#: 27 19 1 20 21 22 23 24 25 26 | 18 17 16 15 13 12 11 10 9 8 7 6
+    Vect: C  1  1 X  X  X  X  X  X  X  | L  L  L  H  L  H  L  L  L L H L
+    Comp:                              | L  L  H  L  L  H  L  L  L L H L
+    Fail:                              |       ?  ?
+
+    CREG =   3,  TOS =  17,    BOS =  19,   PC =  36,   EQ = 0
+	   03#H        11#H          13#H        24#H
+
+    Pipeline :   OE   OPCODE   POL   TEST   DATA     OUTPUTS
+	         1    1A#H     1      6      29      0010010000100100#B
+	                                    1D#H     2424#H
+    Mnemonics:   WAITPL, IF (cond) THEN GOTO PL(data) ELSE WAIT
+    Condition FAIL, TEST tst6 = 1
+    Current PL contents loaded from ROM address 36
+
+	3-14
+
+    --------------------------------------------------------------------
+    V0008           INPUT              |             OUTPUT
+	     /                         |
+	     r  t t  t  t  t  t  t     |
+    Pin   c  e  s s  s  s  s  s  s     | o  o  o  o  o  o
+    Name: l  s  t t  t  t  t  t  t  c  | 1  1  1  1  1  1  o  o  o o o o
+	  k  e  6 5  4  3  2  1  0  c  | 5  4  3  2  1  0  9  8  7 6 5 4
+	                               |
+    Pin#: 27 19 1 20 21 22 23 24 25 26 | 18 17 16 15 13 12 11 10 9 8 7 6
+    Vect: C  1  X X  X  X  X  X  X  X  | L  L  H  L  L  H  L  L  L L H L
+    Comp:                              | L  L  H  L  L  H  L  L  L L H L
+
+    CREG =   3,  TOS =  17,    BOS =  19,   PC =  36,   EQ = 0
+	   03#H        11#H          13#H        24#H
+
+    Pipeline :   OE   OPCODE   POL   TEST   DATA     OUTPUTS
+	         1    1A#H     1      6      29      0010010000100100#B
+	                                    1D#H     2424#H
+    Mnemonics:   WAITPL, IF (cond) THEN GOTO PL(data) ELSE WAIT
+    Condition FAIL, TEST tst6 = 1
+    Current PL contents loaded from ROM address 36
+
+    --------------------------------------------------------------------
+    V0009           INPUT              |             OUTPUT
+	     /                         |
+	     r  t t  t  t  t  t  t     |
+    Pin   c  e  s s  s  s  s  s  s     | o  o  o  o  o  o
+    Name: l  s  t t  t  t  t  t  t  c  | 1  1  1  1  1  1  o  o  o o o o
+	  k  e  6 5  4  3  2  1  0  c  | 5  4  3  2  1  0  9  8  7 6 5 4
+	                               |
+    Pin#: 27 19 1 20 21 22 23 24 25 26 | 18 17 16 15 13 12 11 10 9 8 7 6
+    Vect: C  1  X X  X  X  X  X  X  X  | L  L  H  L  L  H  L  L  L L H L
+    Comp:                              | L  L  H  L  L  H  L  L  L L H L
+
+    CREG =   3,  TOS =  17,    BOS =  19,   PC =  36,   EQ = 0
+	   03#H        11#H          13#H        24#H
+
+    Pipeline :   OE   OPCODE   POL   TEST   DATA     OUTPUTS
+	         1    1A#H     1      6      29      0010010000100100#B
+	                                    1D#H     2424#H
+    Mnemonics:   WAITPL, IF (cond) THEN GOTO PL(data) ELSE WAIT
+    Condition PASS, TEST tst6 = 0
+    Current PL contents loaded from ROM address 36
+
+    -----------------------------------------------------------------
+    Simulation completed    2 simulation error(s) found
+
+
+	       Figure 3-3.  Simulator Output File Example
+
+	3-15
+
+	3.3.3  TERMINATING THE SIMULATION
+
+	When  not in the single-step mode,  the simulation is  terminated
+	when  the simulator has read all of the lines in the test  vector
+	file.   When  in the single-step mode,  the user  terminates  the
+	simulation  by entering the command EX.   After the simulation is
+	terminated,  the  simulator  tells the user  how  many  unmatched
+	output  signals  were detected by displaying the total number  of
+	such errors as seen in Figure 3-3.  Vector V0007 has two   output
+	errors.   The  specified outputs do not agree with  the  computed
+	outputs for o13 and 012.
+
+
+
+	3-16
+
+	3.3.5  INTERACTIVE COMMAND SET
+
+	To use interactive commands, one must be in the single-step mode.
+	Single-step  mode  is specified in the invocation command by  not
+	specifying  the -s option which suppresses the single-step  mode.
+	An interactive command is defined to be the contents of a  single
+	text  line.   Only one command is allowed on a single text  line.
+	The simulator prompts for commands with the prompt "!  ".   There
+	is no difference between the upper and the lower case characters.
+
+	Each  command  line begins with the name of  the  command.   Some
+	commands  require  arguments.   If  the user does not  enter  the
+	argument in the command line,  the simulator will prompt for  the
+	argument.  The argument for interactive commands may be a binary,
+	octal,  decimal,  or hexadecimal number.  Section 3.3.6 describes
+	the format for each of these number bases.  Usually, the argument
+	specifies  the  contents of a register or a  PROM  address.   The
+	argument  should  not exceed the range of values that a  register
+	can hold.   If a user specifies an argument beyond the range, the
+	argument will not be accepted.   All invalid arguments leave  the
+	contents  of the internal register intact.   Note:  the simulator
+	refers to interactive commands as subcommands to distinguish them
+	from the invocation command.
+
+	The space between commands and arguments is optional.
+
+
+	The following commands are currently available:
+
+	LP [number]------> Load Program Counter (PC)
+	LC [number]------> Load Count Register (CREG)
+	LS [number]------> Load Subroutine Register (SREG)
+	LT [number]------> Load Top of Stack (TOS)
+	LB [number]------> Load Bottom of Stack (BOS)
+	RL --------------> Replace Pipeline Register
+	SQ --------------> Set EQ flag
+	RQ --------------> Reset EQ flag
+	SS --------------> Set single step mode
+	CS --------------> Cancel single step mode
+	SB [addr, ....]--> Set break point at memory address
+	CB [addr, ....]--> Cancel break point
+	CBA -------------> Cancal all break points
+	DB --------------> Display break points
+	RUN [prog]-------> Run another program
+	BE --------------> Break at the next occurrence of an error
+	EX --------------> Terminate simulation and exit to OS
+	H  --------------> Display help messages
+	<CR> ------------> Continue simulation
+
+
+	3-17
+
+	Note  that  for breakpoints,  program execution breaks one  cycle
+	before  the  microword at the breakpoint  address  specified   is
+	loaded into the pipeline register.
+
+	Also,  note that the RL command replaces the microword that would
+	have  been clocked into the pipeline register on the  next  clock
+	edge.
+
+
+
+	3.3.6  NUMBERS
+
+	Much of the information passed between the simulator and the user
+	is  expressed  in numeric form.   Input numbers are typed by  the
+	user,   and  accepted  by  the  simulator.   Output  numbers  are
+	generated by the simulator,  and viewed by the user.  Each number
+	is in one of four bases:  2, 8, 10, or 16.
+
+	On input,  the user must specify the intended number base.   This
+	is done by either an explicit number suffix,  or by following the
+	prompt of the simulator.
+
+	The  simulator  output format is fixed.   The  user  can  neither
+	change the format nor the number base.   However, if the internal
+	form  of an output data has a bit width more than or equal to  6,
+	the  simulator displays the data (with the exception of  opcodes)
+	in both decimal and hexadecimal form.  Opcodes are only displayed
+	in  hexadecimal form.   The output field of the pipeline register
+	is displayed in both binary and hexadecimal forms.
+
+	Uppercase  characters do not differ from lowercase characters  in
+	number representation.
+
+	Binary Numbers:   Input and output binary numbers are represented
+	as a string of '0' and '1' digits followed by the string "#B".
+
+	Octal Numbers:  Input and output octal numbers are represented as
+	a  string of the digits '0' through '7' followed  by  the  string
+	"#O".
+
+	Decimal   Numbers:    Input  and  output  decimal   numbers   are
+	represented as a string of the digits '0' through  '9'.   Decimal
+	numbers may optionally be followed by the string "#D".
+
+	Hexadecimal  Numbers:   Input and output hexadecimal numbers  are
+	represented  as  a string of the digits '0' through '9'  and  the
+	letters 'A' through 'F' followed by the string "#X".
+
+
+
+	3-18

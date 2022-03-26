@@ -1,0 +1,252 @@
+"Jan. 21, 1988
+Demonstration file for PAL29M16. This file will show the various
+features of the PLD:
+ - Two 4-bit up/down counters assigned to the 8 dual-feedback macrocells
+    = CTR_A[3:0] = Internal to the PLD, clocked by CLK1 rising edge;
+           outputs are disabled (see S6 and S7 fuses) so the
+           I/O pins associated with the dual-feedback cells
+           can be used as dedicated miscellaneous inputs
+           MISC[3:0]
+    = CTR_B[3:0] = Counter outputs visible through I/O pins COUNTERB[3:0].
+           Note that the I/O pins used for this 2nd counter are
+           enabled by 2 XOR_ENABLE product terms. See Datasheet
+           for block diagram. Clocked by CLK2 rising edge.
+
+Note: The dual-feedback macrocells have virtual cells numbered 25 to 32.
+      These are mapped to the device pins numbered 3,4,9,10,15,16,21,
+      and 22. This means virtual pin 25 is mapped with physical pin 3.
+      The dual-feedback macrocell can be defined two ways: as a regular
+      output cell, or as an internal register.
+
+      A macrocell can be defined as an internal register by setting the
+      appropriate architecture fuses and output enable control. If
+      defined as an internal register, the device pin that is mapped with
+      the internal register can be used as a dedicated combinatorial input.
+
+      If defined as a regular output, the logic expression MUST be assigned
+      to the virtual cell, and not the mapped device pin. For example: An
+      expression must be assigned to the virtual cell/register 32, and not
+      to the device pin 22. The designer will see the output at pin 22.
+
+      Warning: If a dual feedback macrocell is defined as a regular
+      combinatorial output, any feedback term must be referred to in
+      terms of the device pin. Refer to the 29M16 I/O macrocell diagram
+      in the PLD datasheet. If the virtual cell is used as a register,
+      then registered feedback will be available through the feedback path
+      attached to the register. If it is defined as combinatorial,
+      combinatorial feedback will only be available by going out through
+      the output buffer, and then feeding back through the feedback path.
+
+Remember: For dual-feedback macrocells, the logic expression must always
+          be assigned to the virtual cell/register, and NOT the device pin.
+
+ - A four 2:1 multiplexer which gates either CTR_A or CTR_B based
+   on a logic function. Note that outputs will be active low and
+   always on.
+ - A 4-bit latch CTRLATCH[3:0] to latch the CTR_A or CTR_B values
+   based on a logic expression. These latches will be triggered on
+   the low level of CLK2.
+"
+DEVICE tx29m16 (p29m16)
+PIN
+  clk1 = 1 (CLOCK)
+  clk2 = 13 (CLK_INPUT combinatorial)
+  pin_enb = 11 (INPUT combinatorial) "control enable for CTR_B[3:0]"
+
+  ctr_a[3:0] = 25:28 (BREG active_high reg_latch registered out_cell
+                      s4_1 s5_1 s6_0 s7_0)
+
+  ctr_b[3:0] = 29:32 (BREG active_high reg_latch registered out_cell
+                      s4_0 s5_1 s6_1 s7_0)
+
+  RST_CTRs = 2 (INPUT combinatorial)
+  direction = 14 (INPUT combinatorial)
+
+  misc[3:0] = 3:4,9:10 (IO combinatorial)
+     "These inputs (which are will be redefined in the DEFINE section
+      to describe the miscellaneous control functions"
+
+ /funnel[3:0] = 5:8 (IO active_low combinatorial registered out_cell
+                     s4_1 s5_1 s6_1 s7_1 io_feedback)
+
+  counterB[3:0] = 15,16,21,22 (IO combinatorial)
+     "these device pins are used to gate the outputs of the virtual
+      cells CTR_B[3:0]"
+
+  ctrlatch[3:0] = 17:20 (IO active_high reg_latch latched out_cell
+                         s4_0 s5_0 s6_1 s7_1 reg_feedback);
+     "Latch using the low level of CLK2"
+
+Define  "define section"
+   UP       = 0      ,   DOWN     = 1,
+   select1  = misc[3],   select0  = misc[2],
+   xr1      = misc[1],   xr2 = misc[0],
+   choose_a = 0      ,   choose_b = 1;
+
+"Logic Equation Section"
+BEGIN
+reset(ctr_a[3:0],ctr_b[3:0],ctrlatch[3:0]) = rst_ctrs;
+"This is a global reset term. If only one output register
+ were placed inbetween the (), the reset term would
+ still affect all the registers/latches in the device"
+
+xor_enable(ctr_b[3:0]) = xr1 + xr2;
+"Note   : The enable equation is written for the output pin.
+
+ Warning: Even though the equation is written as XR1 + XR2, the
+          actual operation of the device is XR1 xor XR2.
+             !!!  Do NOT use XR1 % XR2  !!!."
+
+"Note that the counters are defined the same way,
+ but the actual operation of the device is dependent
+ on the clock signal that is used to trigger the
+ counter.
+"
+if (direction = UP) then
+  begin
+  case (ctr_a[3:0])
+    begin
+    0) ctr_a[3:0] =  1;
+    1) ctr_a[3:0] =  2;
+    2) ctr_a[3:0] =  3;
+    3) ctr_a[3:0] =  4;
+    4) ctr_a[3:0] =  5;
+    5) ctr_a[3:0] =  6;
+    6) ctr_a[3:0] =  7;
+    7) ctr_a[3:0] =  8;
+    8) ctr_a[3:0] =  9;
+    9) ctr_a[3:0] = 10;
+   10) ctr_a[3:0] = 11;
+   11) ctr_a[3:0] = 12;
+   12) ctr_a[3:0] = 13;
+   13) ctr_a[3:0] = 14;
+   14) ctr_a[3:0] = 15;
+   15) ctr_a[3:0] =  0;
+    end; "CASE"
+  case (ctr_b[3:0])
+    begin
+    0) ctr_b[3:0] =  1;
+    1) ctr_b[3:0] =  2;
+    2) ctr_b[3:0] =  3;
+    3) ctr_b[3:0] =  4;
+    4) ctr_b[3:0] =  5;
+    5) ctr_b[3:0] =  6;
+    6) ctr_b[3:0] =  7;
+    7) ctr_b[3:0] =  8;
+    8) ctr_b[3:0] =  9;
+    9) ctr_b[3:0] = 10;
+   10) ctr_b[3:0] = 11;
+   11) ctr_b[3:0] = 12;
+   12) ctr_b[3:0] = 13;
+   13) ctr_b[3:0] = 14;
+   14) ctr_b[3:0] = 15;
+   15) ctr_b[3:0] =  0;
+    end; "CASE"
+  end;
+else
+  begin
+  case (ctr_a[3:0])
+    begin
+    0) ctr_a[3:0] = 15;
+    1) ctr_a[3:0] =  0;
+    2) ctr_a[3:0] =  1;
+    3) ctr_a[3:0] =  2;
+    4) ctr_a[3:0] =  3;
+    5) ctr_a[3:0] =  4;
+    6) ctr_a[3:0] =  5;
+    7) ctr_a[3:0] =  6;
+    8) ctr_a[3:0] =  7;
+    9) ctr_a[3:0] =  8;
+   10) ctr_a[3:0] =  9;
+   11) ctr_a[3:0] = 10;
+   12) ctr_a[3:0] = 11;
+   13) ctr_a[3:0] = 12;
+   14) ctr_a[3:0] = 13;
+   15) ctr_a[3:0] = 14;
+    end; "CASE"
+  case (ctr_b[3:0])
+    begin
+    0) ctr_b[3:0] = 15;
+    1) ctr_b[3:0] =  0;
+    2) ctr_b[3:0] =  1;
+    3) ctr_b[3:0] =  2;
+    4) ctr_b[3:0] =  3;
+    5) ctr_b[3:0] =  4;
+    6) ctr_b[3:0] =  5;
+    7) ctr_b[3:0] =  6;
+    8) ctr_b[3:0] =  7;
+    9) ctr_b[3:0] =  8;
+   10) ctr_b[3:0] =  9;
+   11) ctr_b[3:0] = 10;
+   12) ctr_b[3:0] = 11;
+   13) ctr_b[3:0] = 12;
+   14) ctr_b[3:0] = 13;
+   15) ctr_b[3:0] = 14;
+    end; "CASE"
+  end;
+
+"Notice that even though FUNNEL[3:0] is an active low signal vector,
+ the logic equation does not need to have a '/' in front of the signal.
+ The '/' is used in the logic equation section to signify ON or OFF,
+ independent of the polarity of the signal as defined in the pin
+ definition section."
+
+if (select1 = choose_a) then
+  funnel[3:0] = ctr_a[3:0];
+else
+  funnel[3:0] = ctr_b[3:0];
+
+if (select0 = choose_b) then
+  ctrlatch[3:0] = ctr_b[3:0];
+else
+  ctrlatch[3:0] = ctr_a[0:3];   "reverse values"
+END.
+
+Test_Vectors
+In   rst_ctrs, clk1;
+breg ctr_a[3:0];
+in   direction, pin_enb,  clk2;
+breg ctr_b[3:0];
+in   misc[3:2];  "cannot currently use SELECT1,SELECT0"
+out  ctrlatch[3:0] , funnel[3:0];
+in   misc[1:0];  "xr1,xr2"
+
+"note the active HIGH definition of FUNNEL[3:0]; the
+ test vector generator will automatically convert any
+ vector values for these signals to its active LOW
+ equivalent"
+Begin
+"             D
+R             I
+S             R P
+T             E I
+|             C N
+C  C          T |   C         S  S
+T  L          I E   L         E  E                         X X
+R  K   CTR_A  O N   K  CTR_B  L  L   CTRLATCH     FUNNEL   R R
+S  1    3210  N B   2   3210  1  0   [3 2 1 0]  [3 2 1 0]  1 2
+_______________________________________________________________  "
+0  0   LLLL   X 0   0  LLLL   0  0    LLLL        LLLL     0 0 ;  " 1"
+0  1   LLLH   0 0   0  LLLL   0  0    HLLL        LLLH     1 0 ;  " 2"
+0  1   LLLH   0 0   0  LLLL   0  1    LLLL        LLLH     1 0 ;  " 3"
+0  1   LLLH   0 0   0  LLLL   1  0    HLLL        LLLL     0 0 ;  " 4"
+0  0   LLLH   0 0   1  LLLH   1  1    HLLL        LLLH     0 0 ;  " 5"
+0  1   LLHL   0 0   0  LLLH   1  1    LLLH        LLLH     0 0 ;  " 6"
+0  0   LLHL   0 0   0  LLLH   1  1    LLLH        LLLH     0 1 ;  " 7"
+0  1   LLHH   0 0   1  LLHL   1  0    LLLH        LLHL     0 1 ;  " 8"
+0  0   LLHH   0 0   0  LLHL   1  0    HHLL        LLHL     0 1 ;  " 9"
+0  1   LHLL   0 0   0  LLHL   0  0    LLHL        LHLL     0 1 ;  "10"
+0  0   LHLL   0 0   1  LLHH   0  0    LLHL        LHLL     0 1 ;  "11"
+0  1   LHLH   0 1   0  LLHH   0  0    ZZZZ        ZZZZ     1 0 ;  "12"
+0  0   LHLH   0 1   0  LLHH   0  0    ZZZZ        ZZZZ     1 0 ;  "13"
+0  1   LHHL   0 1   1  LHLL   0  0    ZZZZ        ZZZZ     0 1 ;  "14"
+0  0   LHHL   0 1   0  LHLL   1  1    ZZZZ        ZZZZ     1 1 ;  "15"
+0  1   LHHH   0 1   0  LHLL   1  1    ZZZZ        ZZZZ     1 0 ;  "16"
+0  0   LHHH   0 1   1  LHLH   1  1    ZZZZ        ZZZZ     1 0 ;  "17"
+0  1   HLLL   0 1   0  LHLH   0  0    ZZZZ        ZZZZ     0 0 ;  "18"
+0  0   HLLL   0 1   0  LHLH   0  0    ZZZZ        ZZZZ     1 0 ;  "19"
+0  1   HLLH   0 1   1  LHHL   1  0    ZZZZ        ZZZZ     0 1 ;  "20"
+0  0   HLLH   0 0   0  LHHL   1  0    HLLH        LHHL     0 1 ;  "21"
+0  1   HLHL   0 0   0  LHHL   1  1    LHHL        LHHL     0 1 ;  "22"
+0  0   HLHL   0 0   1  LHHH   0  1    LHHL        HLHL     1 0 ;  "23"
+End.

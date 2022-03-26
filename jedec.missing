@@ -1,0 +1,12 @@
+	Sorry,  no  jedec.shr.Z  -file.
+I do not know if I ever had it either, since these files are from
+1986 or so, and have travelled thru multiple systems (MSDOS/IBM mainframe/
+UNIX/VMS/..)
+
+Of course one can't create JEDEC files without this module, but
+then there is a possibility to do simulations etc. in workstation
+and move file into a PC for final compile.
+
+At least that is what I have used to do..
+
+	/Matti Aarnio <mea@nic.funet.fi>

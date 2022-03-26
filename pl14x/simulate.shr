@@ -1,0 +1,6096 @@
+# Received: from FINHUTC.HUT.FI by FINHUTC.HUT.FI (Mailer X1.25) with BSMTP id
+ # 3024; Thu, 25 Feb 88 12:54:03 EET
+# Received: from kolvi.hut.fi by FINHUTC.HUT.FI ; 25 Feb 88 12:50:39 EET
+# Date: Thu, 25 Feb 88 12:50:36 +0200
+# From: Matti Arrnio <mea@kolvi.hut.fi>
+# Message-Id: <8802251050.AA15924@kolvi.hut.fi>
+# To: mea
+
+#    This is a shell archive.
+#    Remove everything above and including the cut line.
+#    Then run the rest of the file through sh.
+#----cut here-----cut here-----cut here-----cut here----#
+#!/bin/sh
+# shar:    Shell Archiver
+#    Run the following text with /bin/sh to create:
+#    cmd.c
+#    disp.c
+#    instexec.c
+#    jedec.c
+#    main.c
+#    makefile.
+#    message.c
+#    simdcl.h
+#    simfunc.h
+#    table.c
+#    util.c
+#    vector.c
+# This archive created: Thu Feb 25 12:49:54 1988
+cat << \SHAR_EOF > cmd.c
+/****************************************************************\
+**                                                              **
+**    cmd.c  -  Simulator for Am29PL14x Family     v1.02        **
+**                                                              **
+**    Copyright 1987 Advanced Micro Devices, Inc.               **
+**    Written by Gibbons and Associates, Inc.                   **
+**                                                              **
+**    This file contains the routines for parsing command       **
+**    line arguments and interactive commands.                  **
+**                                                              **
+**    Functions:                                                **
+**       ScanOpt   - parse the command arguments            **
+**       ScanCmd   - parse the interactive commands            **
+**                                                              **
+**    Revision 1.02   10/27/87                                  **
+**       For the RL subcommand, the old value for each field    **
+**     is displayed.                        **
+**                                **
+**       JL subcommand is removed.                **
+**                                                              **
+\****************************************************************/
+
+#include <stdio.h>
+#include <string.h>
+#ifndef VAX
+#include <process.h>
+#include <stdlib.h>
+#endif
+#include "simdcl.h"
+#include "simfunc.h"
+
+/*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
+/*
+** External data declarations
+*/
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+extern            /**** main.c                    */
+SMALL        Mode;        /* simulator control mode       */
+extern
+SMALL        RunMode;    /* single step or not            */
+extern
+BOOLEAN        ConDisp;    /* output to the console or not */
+extern
+BOOLEAN        RegDisp;    /* display internal reg or not  */
+extern
+SMALL        DftX;        /* default for don't care       */
+extern
+SMALL        DevNum;        /* device to be simulated       */
+extern
+FILE        *JedecFil;    /* jedec fuse map file            */
+extern
+FILE        *VectFil;    /* test vector file            */
+extern
+FILE        *OutpFil;    /* output file                */
+extern
+BOOLEAN        EQ;        /* branch control EQ flag       */
+extern
+SML_FLD        PC;        /* program counter            */
+extern
+SML_FLD        CREG;        /* count register            */
+extern
+SML_FLD        SREG;        /* subroutine register            */
+extern
+SML_FLD        TOS;        /* top of stack                   */
+extern
+SML_FLD        BOS;        /* bottom of stack               */
+extern
+BOOLEAN        Cond;        /* test condition        */
+extern
+BOOLEAN        Break[];    /* break point table            */
+extern
+BOOLEAN        BrkOnErr;    /* break on error                */
+extern
+struct Instr     Jam;        /* storage for jammed instr    */
+extern
+struct Instr    *PipelnPt;    /* current pipeline register    */
+extern
+struct Instr    InstrTbl [];    /* instruction table        */
+
+extern            /**** table.c                    */
+struct DevSize    DevParm [];    /* device parameters            */
+
+extern            /**** message.c                */
+char        *DevCode [MAX_TYP];/* device code            */
+extern
+char        *KeyWord [];    /* keyword string               */
+extern
+char        *ErrTbl [];    /* error messages               */
+extern
+char        *MsgTbl [];    /* regular messages               */
+extern
+char        *HelpMsg [];    /* help messages        */
+extern
+char        *OptMsg [];    /* option messages        */
+
+extern            /**** instexec.c                   */
+struct OpInfo    OpDesc [MAX_TYP][MAX_OP];
+                /* instruction exec procedures     */
+
+/*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
+/*
+** Internal data definitions
+*/
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+struct CmdInfo Command [MAX_CMD] =
+{
+    {    "LP",    LoadPC        },
+    {    "LC",     LoadCREG    },
+    {    "LS",    LoadSREG    },
+    {    "LT",     LoadTOS        },
+    {    "LB",    LoadBOS        },
+    {    "RL",    ReplInst    },
+    {    "SQ",      SetEQ        },
+    {    "RQ",     ResetEQ        },
+    {    "SS",    SStep        },
+    {    "CS",    CancelSS     },
+    {    "SB",    SetBreak    },
+    {    "CB",    CancelBrk    },
+    {    "CBA",     CancelAll    },
+    {    "DB",    DispBrk        },
+    {    "RUN",    RunProg        },
+    {    "BE",    ErrBreak    },
+    {    "EX",    ExitCmd        },
+    {    "H",    DispHelp    }
+};
+
+char        *InpPt;        /* current scan position           */
+char        UsrInp [81];    /* buffer for user input           */
+
+/*--------------------------------------------------------------*/
+/*
+** Internal function definitions
+*/
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+ERR_CODE
+ScanOpt (argc, argv)
+
+int        argc;
+char        *argv[];
+
+/*
+** Parses the command line arguments.
+*/
+
+{
+ERR_CODE    Error;
+SMALL        Val;
+register char    *s, *p;
+register int    i, j;
+
+for (Error = NO_ERR, i = 1; Error == NO_ERR && i < argc; i++)
+    {
+    if (argv[i][0] == '-')
+        {
+        for (s = &argv[i][1]; Error == NO_ERR && *s != '\0'; s++)
+            {
+        switch (ToUpper (*s))
+            {
+            case 'E':
+                ConDisp = FALSE;
+                break;
+            case 'S':
+                RunMode = CS;
+                break;
+            case 'R':
+                RegDisp = FALSE;
+                break;
+            case 'B':
+                if (*(s+1) != '\0')
+                Error = ERR_OPT;
+                else
+                {
+                if ((i + 1) >= argc)
+                    Error = ERR_OPT;
+                else
+                    {
+                    i++;
+                    for (p = argv[i]; *p != '\0'; p++)
+                    *p = ToUpper (*p);
+                    if (strcmp (argv[i],KeyWord[ERR]) == 0)
+                    BrkOnErr = TRUE;
+                    else
+                    {
+                    if (ScNum(argv[i],&Val)==NO_ERR
+                        && Val < MAX_AD)
+                    Break[Val] = TRUE;
+                    else
+                    Error = ERR_PARM;
+                    }
+                }
+                }
+                break;
+            case 'X':
+                if (*(s+1) != '\0')
+                Error = ERR_OPT;
+                else
+                {
+                if ((i + 1) >= argc)
+                    Error = ERR_OPT;
+                else
+                    {
+                    i++;
+                    if (ScNum (argv[i], &Val) == NO_ERR
+                      && (Val == 0 || Val == 1))
+                    DftX = Val;
+                    else
+                    Error = ERR_PARM;
+                    }
+                }
+                break;
+            case 'O':
+                if (*(s+1) != '\0')
+                Error = ERR_OPT;
+                else
+                {
+                if ((i + 1) >= argc)
+                    Error = ERR_OPT;
+                else
+                    {
+                    i++;
+                    if ((OutpFil=fopen(argv[i],"w"))== NULL)
+                    Error = ERR_OPEN;
+                    }
+                }
+                break;
+            case 'P':
+                if (*(s+1) != '\0')
+                Error = ERR_OPT;
+                else
+                {
+                if ((i + 1) >= argc)
+                    Error = ERR_OPT;
+                else
+                    {
+                    i++;
+                    p = argv[i];
+                if (ScNum (p+1, &Val) != NO_ERR ||
+                    Val >= MAX_AD)
+                    Error = ERR_PARM;
+                else
+                    {
+                    switch (ToUpper(*p))
+                    {
+                    case 'P':
+                        PC = Val;
+                        break;
+                    case 'C':
+                        CREG = Val;
+                        break;
+                    case 'S':
+                        SREG = Val;
+                        break;
+                    case 'T':
+                        TOS = Val;
+                        break;
+                    case 'B':
+                        BOS = Val;
+                        break;
+                    case 'E':
+                        if (Val == 0||Val == 1)
+                        EQ = Val;
+                        else
+                        Error = ERR_PARM;
+                        break;
+                    default:
+                        Error = ERR_PARM;
+                        break;
+                    }
+                    }
+                    }
+                }
+                break;
+            case 'N':
+                if (*(s+1) != '\0')
+                Error = ERR_OPT;
+                else
+                {
+                if ((i + 1) >= argc)
+                    Error = ERR_OPT;
+                else
+                    {
+                    i++;
+                    if ((VectFil=fopen(argv[i],"r"))==NULL)
+                    Error = ERR_OPEN;
+                    }
+                }
+                break;
+            default:
+                Error = ERR_OPT;
+                break;
+        }    /* switch */
+        }        /* for */
+    }        /* if '-' */
+    else
+    {
+    if ((JedecFil = fopen (argv[i], "r+b")) == NULL)
+       Error = ERR_OPEN;
+       else
+       if ((++i) < argc)
+           Error = ERR_LAST;
+    }
+    }    /* for loop */
+
+if (i == 1)                /* explain options if     */
+    {                /* only enter 'sim14x'    */
+    for (j = 0; ; j++)
+        {
+        if (OptMsg[j] == NULL)
+            break;
+        else
+            fprintf (stderr, OptMsg[j]);
+        }
+    Error = ERR_OPT;
+    }
+else
+    {
+    if (Error != NO_ERR)
+        fprintf (stderr, ErrTbl [Error], argv[i-1]);
+    else
+        {
+        if (VectFil == NULL)
+            fprintf (stderr, ErrTbl [Error = ERR_VMIS]);
+        if (JedecFil == NULL)
+            fprintf (stderr, ErrTbl [Error = ERR_JMIS]);
+        }
+    }
+
+return (Error);
+}
+
+/*--------------------------------------------------------------*/
+/*--------------------------------------------------------------*/
+
+char
+*GetParm ()
+
+/*
+** Returns one string from the user input.
+*/
+
+{
+register char    *StrPt;
+
+if (InpPt == NULL)
+    {
+    InpPt = UsrInp;
+    *InpPt = '\0';
+    }
+for (StrPt = InpPt; *InpPt != '\0'; StrPt++, InpPt++)
+    {
+    if (*StrPt != ' ' && *StrPt != ',')
+        break;
+    }
+for ( ; *InpPt != '\0'; InpPt++)
+    {
+    if (*InpPt == ' ' || *InpPt == ',')
+        {
+        *InpPt++ = '\0';
+        break;
+        }
+    }
+return (StrPt);
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+SMALL
+SrchCmd (Cmd)
+
+char        *Cmd;        /* command string        */
+
+/*
+** Compares command string to command text.
+*/
+
+{
+register SMALL    i;
+char        UpCasCmd [81];
+register char    *p;
+
+p = UpCasCmd;
+while (*p++ = ToUpper (*Cmd++))
+    ;
+for (i = 0; i < MAX_CMD; i++)
+    {
+    if (strcmp (UpCasCmd, Command[i].CmdText) == 0)
+        break;
+    }
+return (i);
+}
+
+/*--------------------------------------------------------------*/
+
+void
+LoadReg (Reg, Msg)
+
+SML_FLD        *Reg;
+SMALL        Msg;
+
+/*
+** Load internal register.
+*/
+
+{
+ERR_CODE    Error = ERR_PARM;
+register char    *Parm;
+SMALL        Adr;
+
+Parm = GetParm ();
+if (*Parm == '\0')
+    {
+    fprintf (stderr, MsgTbl [Msg]);
+    InpPt = gets (UsrInp);
+    Parm = GetParm ();
+    }
+if (ScNum (Parm, &Adr) == NO_ERR)
+    {
+    if (Adr < DevParm[DevNum].MaxAddr && Adr >= 0)
+        {
+        *Reg = Adr;
+        Error = NO_ERR;
+        }
+    }
+if (Error != NO_ERR)
+    fprintf (stderr, ErrTbl[Error], Parm);
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+void
+LoadPC ()
+
+/*
+** Load argument into program counter (PC).
+*/
+
+{
+LoadReg (&PC, MSG_PC);
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+void
+LoadCREG ()
+
+/*
+** Load argument into Count register (CREG).
+*/
+
+{
+LoadReg (&CREG, MSG_CREG);
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+void
+LoadSREG ()
+
+/*
+** Load argument into subroutine register (SREG).
+*/
+
+{
+LoadReg (&SREG, MSG_SREG);
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+void
+LoadTOS ()
+
+/*
+** Load argument into top of stack (TOS).
+*/
+
+{
+LoadReg (&TOS, MSG_TOS);
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+void
+LoadBOS ()
+
+/*
+** Load argument into bottom of stack (BOS).
+*/
+
+{
+LoadReg (&BOS, MSG_BOS);
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+void
+SetEQ ()
+
+/*
+** Set EQ flag.
+*/
+
+{
+EQ = 1;
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+void
+ResetEQ ()
+
+/*
+** Reset EQ flag.
+*/
+
+{
+EQ = 0;
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+void
+SStep ()
+
+/*
+** Set single step mode.
+*/
+
+{
+RunMode = SS;
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+void
+CancelSS ()
+
+/*
+** Cancel single step mode.
+*/
+
+{
+RunMode = CS;
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+void
+ProcBrk (Set)
+
+BOOLEAN        Set;        /* TRUE if set break               */
+
+{
+ERR_CODE    Error = NO_ERR;
+register char    *Parm;
+SMALL        Adr;
+BOOLEAN        Done;
+
+Parm = GetParm ();
+if (*Parm == '\0')
+    {
+    fprintf (stderr, MsgTbl [MSG_BP]);
+    InpPt = gets (UsrInp);
+    Parm = GetParm ();
+    }
+for (Done = FALSE; ! Done && Error == NO_ERR; )
+    {
+    if (*Parm == '\0')
+        Done = TRUE;
+    else
+        {
+        if ((Error = ScNum (Parm, &Adr)) == NO_ERR)
+            {
+            if (Adr < DevParm[DevNum].MaxAddr && Adr >= 0)
+                {
+                Break[Adr] = Set;
+                Parm = GetParm ();
+                }
+            else
+                Error = ERR_PARM;
+            }
+        }
+    }
+if (Error != NO_ERR)
+    fprintf (stderr, ErrTbl[ERR_PARM], Parm);
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+void
+SetBreak ()
+
+/*
+** Set break point at PROM address specified by argument.
+*/
+
+{
+ProcBrk (TRUE);
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+void
+CancelBrk ()
+
+/*
+** Cancel break point at PROM address specified by argument.
+*/
+
+{
+ProcBrk (FALSE);
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+void
+CancelAll ()
+
+/*
+** Cancel all break points.
+*/
+
+{
+register SMALL    i;
+
+for (i = DevParm[DevNum].MaxAddr - 1; i >= 0; i--)
+    Break[i] = FALSE;
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+void
+DispBrk ()
+
+/*
+** Display break points currently set.
+*/
+
+{
+SMALL        i;
+char        BrkStr [129], NumStr[4];
+BOOLEAN        First;
+
+strcpy (BrkStr, MsgTbl [MSG_BP]);
+for (i = 0, First = TRUE; i < DevParm[DevNum].MaxAddr; i++)
+    {
+    if (Break[i])
+        {
+        if (First)
+            First = FALSE;
+        else
+            strcat (BrkStr, ", ");
+        sprintf (NumStr, "%d", i);
+        strcat (BrkStr, NumStr);
+        }
+    }
+strcat (BrkStr, "\n");
+fprintf (stderr, BrkStr);
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+void
+RunProg ()
+
+/*
+** Run another program.
+*/
+
+{
+system (InpPt);
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+void
+ExitCmd ()
+
+/*
+** Terminate simulation and exit.
+*/
+
+{
+Mode = EXIT;
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+void
+DispHelp ()
+
+/*
+** Display the help messages.
+*/
+
+{
+register int    i;
+
+for (i = 0; ; i++)
+    {
+    if (HelpMsg[i] == NULL)
+        break;
+    else
+        fprintf (stderr, HelpMsg[i]);
+    }
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+SML_FLD
+GetField (Msg, Min, Max, OldVal)
+
+SMALL        Msg;        /* message index        */
+SMALL        Min;        /* maximum value allowed    */
+SMALL        Max;        /* maximum value allowed    */
+char        *OldVal;    /* original value        */
+
+/*
+** This routine prompt for each instruction field content.
+*/
+
+{
+SML_FLD        Val;
+register char    *Parm;
+char        QryLine [41];
+
+for (;;)
+    {
+    if (PipelnPt == NULL)
+        sprintf (QryLine, "%s%s\n? ",
+             MsgTbl [Msg], MsgTbl [MSG_UNDF]);
+    else
+        sprintf (QryLine, "%s%s\n? ", MsgTbl [Msg], OldVal);
+    fprintf (stderr, QryLine);
+    InpPt = gets (UsrInp);
+    Parm = GetParm ();
+    if (ScNum (Parm, &Val) == NO_ERR)
+        {
+        if (Val >= Min && Val <= Max)
+            {
+            break;
+            }
+        }
+    fprintf (stderr, ErrTbl[ERR_PARM], Parm);
+    }
+return (Val);
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+void
+ReplInst ()
+
+/*
+** Replace one instruction.
+*/
+
+{
+char        OldVal[21];
+
+if (PC < DevParm[DevNum].MaxAddr && PC >= 0)
+    PipelnPt = &InstrTbl [PC];
+else
+    PipelnPt = NULL;
+sprintf (OldVal, "%1d", PipelnPt->OE);
+Jam.OE = (BOOLEAN)GetField (MSG_OE, 0, 1, OldVal);
+sprintf (OldVal, "%02X#H", PipelnPt->Opcode);
+Jam.Opcode = GetField (MSG_OP, 0, MAX_OP-1, OldVal);
+if (Jam.Opcode >= CMP_LOW && Jam.Opcode <= CMP_HIGH)
+    {
+    sprintf (OldVal, "%02X#H", PipelnPt->Const);
+    Jam.Const = GetField (MSG_CONS, 0,
+             DevParm[DevNum].MaxAddr-1, OldVal);
+    }
+else
+    {
+    sprintf (OldVal, "%1d", PipelnPt->Pol);
+    Jam.Pol = (BOOLEAN)GetField (MSG_POL, 0, 1, OldVal);
+    sprintf (OldVal, "%2d", PipelnPt->Test);
+    Jam.Test = GetField (MSG_TEST, 0,
+             DevParm[DevNum].MaxTest-1, OldVal);
+    }
+sprintf (OldVal, "%02X#H", PipelnPt->Data);
+Jam.Data = GetField (MSG_DATA, 0, DevParm[DevNum].MaxAddr-1, OldVal);
+if (DevNum == PL131)
+    sprintf (OldVal, "%03X#H", PipelnPt->Outputs);
+else
+    sprintf (OldVal, "%04X#H", PipelnPt->Outputs);
+Jam.Outputs = GetField (MSG_OUT, -32767, 32767, OldVal);
+PipelnPt = &Jam;
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+void
+ErrBreak ()
+
+/*
+** Break at next occurrence of error.
+*/
+
+{
+BrkOnErr = TRUE;
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+void
+ScanCmd ()
+
+/*
+** Parses the interactive command.
+*/
+
+{
+SMALL        CmdIndx;
+register char    *Cmd;
+
+if ((InpPt = gets (UsrInp)) == NULL)
+    Mode = END;
+else
+    {
+    Cmd = GetParm ();
+    if (strlen (Cmd) == 0)        /* just a CR    */
+        Mode = RunMode;
+    else
+        {
+        CmdIndx = SrchCmd (Cmd);
+        if (CmdIndx >= MAX_CMD)
+            fprintf (stderr, ErrTbl [ERR_CMD], Cmd);
+        else
+            {
+            (*Command[CmdIndx].Handler) ();
+            }
+        }
+    }
+}
+
+/*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
+
+/* end of cmd.c */
+SHAR_EOF
+cat << \SHAR_EOF > disp.c
+/****************************************************************\
+**                                                              **
+**    disp.c  -  Simulator for Am29PL14x Family     v1.02       **
+**                                                              **
+**    Copyright 1987 Advanced Micro Devices, Inc.               **
+**    Written by Gibbons and Associates, Inc.                   **
+**                                                              **
+**    This file contains the routines that control the          **
+**    simulation display.                                       **
+**                                                              **
+**    Functions:                                                **
+**       DispInit  - initialize the display generator           **
+**       FillBin   - generate a binary field                 **
+**       FillVect  - fill in the vector data                    **
+**       FillComp  - fill in the computed output data           **
+**       FillErr   - fill in the error display line             **
+**     FillReg   - fill in the internal registers display     **
+**     DispGen   - generate the simulation display            **
+**                                                              **
+**    Revision 1.02   10/27/87                       **
+**     Add one line of information regarding the condition    **
+**     begin tested.                        **
+**                                **
+**     Clear the lines left over from the previous step.    **
+**                                **
+**     When EXP fuse is blown, the pc value of 7F#H appears   **
+**     on the second test vector.                **
+**                                **
+**     Display only 3 Hex nibbles in the output field of the  **
+**      131 (instead of 4).                    **
+**                                **
+\****************************************************************/
+
+#include <stdio.h>
+#include <string.h>
+#include "simdcl.h"
+#include "simfunc.h"
+
+/*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
+/*
+** External data declarations
+*/
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+extern            /**** vector.c                */
+SMALL        SigCnt;        /* number of signals declared    */
+extern
+SMALL        SigList [MAX_PIN]; /* pin number         */
+extern
+SMALL        VectNum;    /* current test vector        */
+
+extern            /**** instexec.c            */
+struct OpInfo    OpDesc [MAX_TYP][MAX_OP];/* instr description    */
+
+extern            /**** main.c                */
+FILE        *OutpFil;    /* output file                */
+extern
+BOOLEAN        ConDisp;    /* output to console            */
+extern
+BOOLEAN     RegDisp;    /* display internal registers   */
+extern
+SMALL        CumErrCt;    /* cumulative error count    */
+extern
+SMALL        DevNum;        /* device to be simulated          */
+extern
+SML_FLD        ZeroOut;    /* value for zero output    */
+extern
+OUT_FLD        POut;        /* value for output pins    */
+extern
+struct Instr    *PipelnPt;    /* current pipeline register    */
+extern
+struct Instr     Jam;        /* jammed instruction        */
+extern
+BOOLEAN        EQ;        /* branch control EQ flag          */
+extern
+SML_FLD        PC;        /* program counter                 */
+extern
+SML_FLD     CREG;           /* counter register                */
+extern
+SML_FLD     SREG;           /* subroutine register             */
+extern
+SML_FLD        TOS;        /* top of stack            */
+extern
+SML_FLD        BOS;        /* bottom of stack        */
+extern
+BOOLEAN        Expansion;    /* expansion fuse        */
+extern
+BOOLEAN        Cond;        /* test condition        */
+extern
+SML_FLD        TInPipe;    /* test input             */
+extern
+SML_FLD        CCInPipe;    /* cond code input        */
+extern
+BOOLEAN        EQReset;    /* EQ is reset            */
+
+extern            /**** table.c                    */
+struct DevSize     DevParm [];        /* device parameters    */
+extern
+struct PinInfo    PinList [MAX_TYP] [MAX_PIN + 1];
+extern
+SMALL        ZeroPin [MAX_TYP];    /* zero output pin    */
+extern
+SMALL        OutPin [MAX_TYP][17];    /* output pin           */
+extern
+OUT_FLD        OEMask [];        /* tri-state bits         */
+extern
+SMALL        TstPin [MAX_TYP][8];    /* pin # for T[6:0]    */
+extern
+SMALL        CCPin [MAX_TYP][2];    /* pin # for CC        */
+
+extern            /**** message.c                    */
+char        *MsgTbl [];        /* regular messages    */
+extern
+char        *DataMnem [MAX_TYP][MAX_OP];/* assembly mnem    */
+extern
+char        *AsmMnem [MAX_TYP][MAX_OP];/* assembly mnem     */
+extern
+char        *DspLin [];        /* step display        */
+extern
+char        *Undef1;        /* symbol for undefined    */
+extern
+char        *Undef2;        /* undefined (hex value)*/
+extern
+char        UndefMrk;        /* mark for undefined    */
+extern
+char        *PipeTtl1;        /* title line for pipeln*/
+extern
+char        *PipeTtl2;        /* title for cmp instr    */
+
+
+/*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
+/*
+** Internal data definitions
+*/
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+
+/*-------------------------------------------------------------*/
+/*
+** Internal function definitions
+*/
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+char
+NameChar (PinNum, CharCnt, CharNum)
+
+SMALL    PinNum;            /* the pin number           */
+SMALL    CharCnt;        /* the character count           */
+SMALL    CharNum;        /* the character index           */
+
+/*
+** This routine selects a character for display from a pin name.
+** the display is "right justified" in a field of size CharCnt,
+** so if the name is shorter than CharCnt, it will be padded on
+** the "left" with blanks.
+*/
+
+{
+register SMALL    Len, CharInd;
+
+Len = strlen (PinList [DevNum][PinNum].Name);
+CharInd = (Len >= CharCnt) ? CharNum : (Len - CharCnt + CharNum);
+return (CharInd >= 0 ? PinList [DevNum][PinNum].Name [CharInd] : ' ');
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+void
+DispInit ()
+
+/*
+** This routine initializes the display generator.
+*/
+
+{
+register SMALL    PinNum, i, j, CrntIO, Col, Flag;
+char        NumStr[4];
+
+if (ConDisp || OutpFil != NULL)
+    {
+    for (i = 0, CrntIO = 0xFF; i < SigCnt; i++)
+        {
+        PinNum = SigList[i];
+        Flag = PinList [DevNum][PinNum].IOFlag;
+        if (Flag == CLOCK)
+            Flag = INPUT;
+        if (Flag != CrntIO)
+            {
+            if (Flag == OUTPUT)
+                Col = 37;
+            else
+                Col = 6;
+            CrntIO = Flag;
+            }
+        PinList [DevNum][PinNum].DispCol = Col;
+        for (j = 0; j < NAME_SIZ; j++)
+            DspLin[j+2][Col] = NameChar (PinNum,NAME_SIZ,j);
+        sprintf (NumStr, "%d", PinNum);
+        j = (PinNum < 10) ? 1 : 2;
+        strncpy (&DspLin[8][Col], NumStr, j);
+        Col += (j + 1);
+        }
+    }
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+void
+FillBin (BinWord, BinBits, DspLinPt)
+
+OUT_FLD     BinWord;    /* the binary word           */
+SMALL        BinBits;    /* the bit count           */
+char        *DspLinPt;    /* the display line            */
+
+/*
+** This routine is used to generate a binary field in a
+** display line.
+*/
+
+{
+register char    *Pt;
+register SMALL    BitMask;
+
+Pt = DspLinPt + BinBits;
+*Pt-- = '\0';
+for (BitMask = 1; Pt >= DspLinPt; Pt--, BitMask <<= 1)
+    {
+    *Pt = (char)((BinWord & BitMask) ? '1' : '0');
+    }
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+void
+FillVect (DispLin)
+
+char    DispLin [];        /* the template to be filled   */
+
+/*
+** This routine fills in the vector data in a display line
+** (the template for line 9).
+*/
+
+{
+register SMALL        i;
+struct PinInfo        *PinPt;
+
+for (i = 0; i < SigCnt; i++)
+    {
+    PinPt = &PinList [DevNum][SigList[i]];
+    DispLin [PinPt->DispCol] = PinPt->Value;
+    }
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+void
+FillComp (DispLin)
+
+char    DispLin [];        /* the template to be filled   */
+
+/*
+** This routine fills in the computed output data in the vector
+** form.
+*/
+
+{
+OUT_FLD        Mask;
+SMALL        i, PinNum, Col;
+
+if (PinNum = ZeroPin [DevNum])
+    {
+    if (Col = PinList [DevNum][PinNum].DispCol)
+        {
+        if (CREG == UNDEFINE)
+            DispLin [Col] = UndefMrk;
+        else
+            DispLin [Col] = (char)((ZeroOut) ? 'H' : 'L');
+        }
+    }
+for (i=0, Mask=1; PinNum = OutPin [DevNum][i]; i++, Mask = Mask << 1)
+    {
+    if (Col = PinList [DevNum][PinNum].DispCol)
+        {
+        if (PipelnPt == NULL)
+            {
+            if (Expansion && (PC != UNDEFINE))
+            {
+            if (Mask & OUT_MASK)
+                DispLin[Col] = (char)((POut&Mask)?'H':'L');
+            else
+                DispLin[Col] = UndefMrk;
+            }
+            else
+            DispLin [Col] = UndefMrk;
+            }
+        else
+            {
+            if (PipelnPt->OE)
+            DispLin [Col] = (char)((POut & Mask) ? 'H':'L');
+            else
+            {
+            if (Mask & OEMask[DevNum])
+                DispLin [Col] = (char)'Z';
+            else
+                DispLin[Col]= (char)((POut&Mask) ? 'H':'L');
+            }
+            }
+        }
+    }
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+void
+FillErr (DispLin)
+
+char    DispLin [];        /* the template to be filled   */
+
+/*
+** This routine fills in the error display line.
+*/
+
+{
+register SMALL    i;
+struct PinInfo    *PinPt;
+
+for (i = 0; i < SigCnt; i++)
+    {
+    PinPt = &PinList [DevNum][SigList[i]];
+    if (PinPt->ErrFlag)
+        {
+        DispLin [PinPt->DispCol] = '?';
+        CumErrCt += 1;
+        }
+    else
+        DispLin [PinPt->DispCol] = ' ';
+    }
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+void
+FillVal (Reg, DecStr, HexStr)
+
+SML_FLD        Reg;
+char        *DecStr;
+char        *HexStr;
+
+/*
+** This routine generates the number representation of an
+** internal register.
+*/
+
+{
+if (Reg == UNDEFINE)
+    {
+    strcpy (DecStr, Undef1);
+    strcpy (HexStr, Undef2);
+    }
+else
+    {
+    sprintf (DecStr, "%3d", Reg);
+    sprintf (HexStr, "%02X#H", Reg);
+    }
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+void
+FillTM ()
+
+/*
+** This routine generates T[5:0] and T*M.
+*/
+
+{
+char        TmpStr [81];
+
+if (DevNum == PL142)
+    sprintf (TmpStr, "T[6:0] = %02X#H, T*M = %02X#H", TInPipe, TM ());
+else
+    sprintf (TmpStr, "T[5:0] = %02X#H, T*M = %02X#H", TInPipe, TM ());
+strcat (DspLin [20], TmpStr);
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+void
+FillReg ()
+
+/*
+** This routine fills in the internal registers display lines.
+*/
+
+{
+char        BinStr [19], BinStr2 [6], TmpStr [81];
+char        CREGDec[4], SREGDec[4], PCDec[4], EQDec[4];
+char        TOSDec[4], BOSDec[4];
+char        CREGHex[5], SREGHex[5], PCHex[5], EQHex[5];
+char        TOSHex[5], BOSHex[5];
+SML_FLD        Mask;
+SMALL        PinNum;
+
+FillVal (CREG, CREGDec, CREGHex);
+FillVal (PC, PCDec, PCHex);
+FillVal (EQ, EQDec, EQHex);
+if (DevNum == PL142)
+    {
+    FillVal (TOS, TOSDec, TOSHex);
+    FillVal (BOS, BOSDec, BOSHex);
+    sprintf (DspLin [13],
+        "CREG = %s,  TOS = %s,    BOS = %s,   PC = %s,   EQ = %s\n",
+        CREGDec, TOSDec, BOSDec, PCDec, &EQDec[2]);
+    sprintf (DspLin [14],
+        "       %s        %s          %s        %s\n",
+        CREGHex, TOSHex, BOSHex, PCHex);
+    }
+else
+    {
+    FillVal (SREG, SREGDec, SREGHex);
+    sprintf (DspLin [13],
+        "CREG = %s,  SREG = %s,   PC = %s,    EQ = %s\n",
+        CREGDec, SREGDec, PCDec, &EQDec[2]);
+    sprintf (DspLin [14],
+        "        %s         %s        %s\n",
+        CREGHex, SREGHex, PCHex);
+    }
+
+DspLin [20][0] = '\0';
+if (PipelnPt == NULL)
+    {
+    sprintf (DspLin [16], "Pipeline :   %s\n", Undef1);
+    strcpy  (DspLin [17], "\n");
+    strcpy  (DspLin [18], "\n");
+    sprintf (DspLin [19], "Mnemonics:   %s\n", Undef1);
+    }
+else
+    {
+    if (PipelnPt->Opcode < CMP_LOW || PipelnPt->Opcode > CMP_HIGH)
+    {
+    sprintf (DspLin [16], "%s\n", PipeTtl1);
+    FillBin (PipelnPt->Outputs, DevParm[DevNum].BtsPerOt, BinStr);
+    sprintf (DspLin [17],
+    "             %1d    %02X#H     %1d     %2d     %3d      %s#B\n",
+        PipelnPt->OE, PipelnPt->Opcode, PipelnPt->Pol,
+        PipelnPt->Test, PipelnPt->Data, BinStr);
+    sprintf (DspLin [18],
+    "                                        %02X#H",
+        PipelnPt->Data);
+    }
+    else
+    {
+    sprintf (DspLin [16], "%s\n", PipeTtl2);
+    FillBin (PipelnPt->Outputs, DevParm[DevNum].BtsPerOt, BinStr);
+    FillBin (PipelnPt->Opcode >> 2, 3, BinStr2);
+    sprintf (DspLin [17],
+    "             %1d    %s#B    %3d        %3d        %s#B\n",
+        PipelnPt->OE, BinStr2, PipelnPt->Const,
+        PipelnPt->Data, BinStr);
+    sprintf (DspLin [18],
+    "                           %02X#H       %02X#H  ",
+        PipelnPt->Const, PipelnPt->Data);
+    }
+    if (DevNum == PL131)
+    sprintf (BinStr, "     %03X#H\n", PipelnPt->Outputs);
+    else
+    sprintf (BinStr, "     %04X#H\n", PipelnPt->Outputs);
+    strcat (DspLin [18], BinStr);
+    sprintf (DspLin [19], "Mnemonics:   %s, %s\n",
+        DataMnem [DevNum][PipelnPt->Opcode],
+        AsmMnem [DevNum][PipelnPt->Opcode]);
+
+    if (OpDesc[DevNum][PipelnPt->Opcode].CondSel)
+        {
+    if (Cond)
+        strcat (DspLin [20], "Condition PASS");
+    else
+         strcat (DspLin [20], "Condition FAIL");
+        if (PipelnPt->Test <= 5 ||
+         (DevNum == PL142 && PipelnPt->Test == 6))
+        {
+        Mask = 1 << PipelnPt->Test;
+        PinNum = TstPin [DevNum][PipelnPt->Test];
+        sprintf (TmpStr, ", TEST %s = %1d",
+                PinList[DevNum][PinNum].Name, (TInPipe&Mask) ? 1:0);
+        }
+    else
+        {
+        if ((PipelnPt->Test == 6) ||
+                (DevNum == PL142 && PipelnPt->Test == 7))
+        {
+        PinNum = CCPin[DevNum][0];
+                sprintf (TmpStr, ", TEST %s = %1d",
+                PinList[DevNum][PinNum].Name, CCInPipe);
+        }
+        else
+        {
+        if ((PipelnPt->Test == 7) || (PipelnPt->Test == 8))
+            sprintf (TmpStr, ", TEST EQ = %1d", EQ);
+        else
+            {
+            if (PipelnPt->Test == 9)
+            sprintf (TmpStr,
+             ", TEST (CREG=0) = %1d", (CREG==0));
+            else
+            sprintf (TmpStr, ", TEST UNCOND = 0");
+            }
+              }
+        }
+    strcat (DspLin [20], TmpStr);
+        if (OpDesc[DevNum][PipelnPt->Opcode].TM)
+        {
+        if (DevNum == PL142)
+        sprintf (TmpStr, ", T[6:0] = %02X#H, T*M = %02X#H",
+            TInPipe, TM ());
+        else
+        sprintf (TmpStr, ", T[5:0] = %02X#H, T*M = %02X#H",
+            TInPipe, TM ());
+        strcat (DspLin [20], TmpStr);
+        }
+    }
+    else
+        {
+    if (OpDesc[DevNum][PipelnPt->Opcode].TM)
+        {
+        if (PipelnPt->Opcode == DECTM_OP)
+        {
+        if (CREG == 0)
+            FillTM ();
+        }
+        else
+        {
+        if (PipelnPt->Opcode == LPTM_OP && DevNum == PL142)
+            {
+            if (CREG != 0)
+                FillTM ();
+            }
+        else
+            {
+            FillTM ();
+            if ((TM () ^ PipelnPt->Const) == 0)
+            strcat (DspLin [20], ", EQ will be set");
+            }
+        }
+            }
+     }
+    }
+if (PipelnPt == NULL)
+    strcpy (DspLin [21], MsgTbl [MSG_PLX]);
+else if (PipelnPt == &Jam)
+    strcpy (DspLin [21], MsgTbl [MSG_PLJR]);
+else
+    sprintf (DspLin [21], "%s %d\n", MsgTbl[MSG_PL], PC);
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+void
+DispGen ()
+
+/*
+** This routine generates the simulation display given the
+** current state of the simulation.
+*/
+
+{
+register SMALL    i, ErrCnt;
+
+ErrCnt = CumErrCt;
+FillErr (DspLin [11]);
+
+if (ConDisp || OutpFil != NULL)
+    {
+    sprintf (&DspLin[1][1], "%04d", VectNum);
+    DspLin[1][5] = ' ';
+    FillVect (DspLin [9]);
+    FillComp (DspLin [10]);
+    if (RegDisp)
+        {
+        if (EQReset)
+            {
+            if (DspLin [20][0] == '\0')
+                strcat (DspLin[20], "EQ will be reset\n");
+            else
+                strcat (DspLin[20], ", EQ will be reset\n");
+            }
+        else
+            strcat (DspLin [20], "\n");
+        }
+    }
+if (ConDisp)
+    {
+    fprintf (stdout, "\n\n");
+    for (i = 0; i <= 10; i++)
+        fprintf (stdout, DspLin[i]);
+    if (CumErrCt > ErrCnt)
+        fprintf (stdout, DspLin [11]);
+    fprintf (stdout, DspLin [12]);
+    if (RegDisp)
+        for (i = 13; i < MAX_LINE; i++)
+            fprintf (stdout, DspLin [i]);
+    }
+if (OutpFil != NULL)
+    {
+    for (i = 0; i <= 10; i++)
+        fprintf (OutpFil, DspLin[i]);
+    if (CumErrCt > ErrCnt)
+        fprintf (OutpFil, DspLin [11]);
+    fprintf (OutpFil, DspLin [12]);
+    if (RegDisp)
+        for (i = 13; i < MAX_LINE; i++)
+            fprintf (OutpFil, DspLin [i]);
+    }
+}
+
+/*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
+
+/* end of disp.c */
+SHAR_EOF
+cat << \SHAR_EOF > instexec.c
+/***************************************************************\
+**                                                             **
+**    instexec.c  -  Simulator for Am29PL14x Family    v1.02   **
+**                                                             **
+**    Copyright 1987 Advanced Micro Devices, Inc.              **
+**    Written by Gibbons and Associates, Inc.                  **
+**                                                             **
+**    This file contains the instruction execution simulation  **
+**    routines.                                                **
+**                                                             **
+**    Functions:                                               **
+**                                                             **
+**    Revision 1.02   10/27/87                       **
+**      OpDesc table is modified to show if T*M is needed.    **
+**                                   **
+**       Set flag if EQ is affected.                   **
+**                                   **
+\***************************************************************/
+
+#include "simdcl.h"
+#include "simfunc.h"
+
+/*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
+/*
+** External data declarations
+*/
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+extern            /**** main.c                */
+SML_FLD        CREG;        /* count register            */
+extern
+SML_FLD     SREG;           /* subroutine register             */
+extern
+SML_FLD     TOS;            /* subroutine register             */
+extern
+SML_FLD     BOS;            /* subroutine register             */
+extern
+BOOLEAN        Cond;        /* test condition        */
+extern
+SML_FLD        TInPipe;    /* test inputs used by instr    */
+extern
+SMALL        DevNum;        /* device to be simulated    */
+extern
+struct Instr    *PipelnPt;    /* current pipeline register       */
+extern
+SML_FLD        PC;        /* program counter                 */
+extern
+BOOLEAN        EQ;        /* branch control EQ flag          */
+extern
+BOOLEAN        EQReset;    /* show if EQ will be reset    */
+extern
+BOOLEAN        OutpCREG;    /* output content of CREG    */
+
+extern            /**** table.c                    */
+struct DevSize    DevParm [];    /* device parameters            */
+extern
+SMALL        TestEQ [];    /* value for test EQ        */
+
+
+/*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
+/*
+** Internal data definitions
+*/
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+struct OpInfo    OpDesc [MAX_TYP][MAX_OP] =
+{
+    {
+        {RETPL,        TRUE,    FALSE},
+        {RETPLN,    TRUE,    FALSE},
+        {RET,        TRUE,    FALSE},
+        {RETN,        TRUE,    FALSE},
+        {LDPL,        TRUE,    FALSE},
+        {LDPLN,        TRUE,    FALSE},
+        {LDTM,        TRUE,    TRUE},
+        {LDTMN,        TRUE,    TRUE},
+        {LPPL,        FALSE,     FALSE},
+        {DEC,        TRUE,    FALSE},
+        {LPPLN,        FALSE,     FALSE},
+        {GOTOPLZ,    FALSE,     FALSE},
+        {DECPL,        FALSE,     FALSE},
+        {CONT,        FALSE,     FALSE},
+        {DECTM,        FALSE,     TRUE},
+        {GOTOTM,    TRUE,     TRUE},
+        {CMP,        FALSE,  TRUE},
+        {CMP,        FALSE,  TRUE},
+        {CMP,        FALSE,  TRUE},
+        {CMP,        FALSE,  TRUE},
+        {PSHPL,        TRUE,    FALSE},
+        {PSH,        TRUE,    FALSE},
+        {PSHTM,        TRUE,    TRUE},
+        {PSHN,        TRUE,    FALSE},
+        {FORK,        TRUE,    FALSE},
+        {GOTOPL,    TRUE,    FALSE},
+        {WAIT,        TRUE,    FALSE},
+        {DECGOPL,    TRUE,    FALSE},
+        {CALPL,        TRUE,    FALSE},
+        {CALPLN,    TRUE,     FALSE},
+        {CALTM,        TRUE,     TRUE},
+        {CALTMN,    TRUE,     TRUE}
+    },
+    {
+        {RETPL,        TRUE,    FALSE},
+        {RETPLN,    TRUE,    FALSE},
+        {RET,        TRUE,    FALSE},
+        {RETN,        TRUE,    FALSE},
+        {LDPL,        TRUE,    FALSE},
+        {LDPLN,        TRUE,    FALSE},
+        {LDTM,        TRUE,    TRUE},
+        {LDTMN,        TRUE,    TRUE},
+        {LPPL,        FALSE,     FALSE},
+        {DEC,        TRUE,    FALSE},
+        {LPPLN,        FALSE,     FALSE},
+        {GOTOPLZ,    FALSE,     FALSE},
+        {DECPL,        FALSE,     FALSE},
+        {CONT,        FALSE,     FALSE},
+        {DECTM,        FALSE,     TRUE},
+        {GOTOTM,    TRUE,     TRUE},
+        {CMP,        FALSE,  TRUE},
+        {CMP,        FALSE,  TRUE},
+        {CMP,        FALSE,  TRUE},
+        {CMP,        FALSE,  TRUE},
+        {PSHPL,        TRUE,    FALSE},
+        {PSH,        TRUE,    FALSE},
+        {PSHTM,        TRUE,    TRUE},
+        {PSHN,        TRUE,    FALSE},
+        {FORK,        TRUE,    FALSE},
+        {GOTOPL,    TRUE,    FALSE},
+        {WAIT,        TRUE,    FALSE},
+        {DECGOPL,    TRUE,    FALSE},
+        {CALPL,        TRUE,    FALSE},
+        {CALPLN,    TRUE,     FALSE},
+        {CALTM,        TRUE,     TRUE},
+        {CALTMN,    TRUE,     TRUE}
+    },
+    {
+        {RETPL_2,    TRUE,     FALSE},
+        {OUTPUT_2,    TRUE,     FALSE},
+        {RET_2,        TRUE,     FALSE},
+        {GOTOSTK_2,    TRUE,     FALSE},
+        {LDPL,        TRUE,     FALSE},
+        {PSHCTR_2,    TRUE,     FALSE},
+        {LDTM,        TRUE,     TRUE},
+        {POP_2,        TRUE,    FALSE},
+        {LPPL,        FALSE,    FALSE},
+        {NOP_2,        FALSE,    FALSE},
+        {LPTM_2,    FALSE,    TRUE},
+        {DEC,        TRUE,   FALSE},
+        {DECPL,        FALSE,    FALSE},
+        {CONT_2,    FALSE,    FALSE},
+        {DECTM,        FALSE,     TRUE},
+        {LPPLN_2,    FALSE,    FALSE},
+        {CMP,        FALSE,     TRUE},
+        {CMP,        FALSE,     TRUE},
+        {CMP,        FALSE,     TRUE},
+        {CMP,        FALSE,     TRUE},
+        {PSHPL_2,    TRUE,    FALSE},
+        {PSH_2,        TRUE,    FALSE},
+        {PSHTM_2,    TRUE,    TRUE},
+        {POPCNTR_2,    TRUE,    FALSE},
+        {FORK_2,    TRUE,    FALSE},
+        {GOTOPL,    TRUE,    FALSE},
+        {WAIT,        TRUE,    FALSE},
+        {WAITTM_2,    TRUE,    TRUE},
+        {CALPL_2,    TRUE,    FALSE},
+        {DECGOPL,    TRUE,    FALSE},
+        {CALTM_2,    TRUE,    TRUE},
+        {GOTOTM,    TRUE,     TRUE}
+    }
+};
+
+
+
+/*-------------------------------------------------------------*/
+/*
+** Internal function definitions
+*/
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+SML_FLD
+TM ()
+
+/*
+** This routine returns the T*M value (T[5:0] inputs under
+** bitwise mask from the DATA field).
+*/
+
+{
+return (TInPipe & PipelnPt->Data);
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+void
+DecCREG ()
+
+/*
+** CREG decrementer.
+*/
+
+{
+if (CREG == 0)
+    CREG = DevParm[DevNum].MaxAddr;
+CREG -= 1;
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+void
+IncPC ()
+
+/*
+** PC incrementer.
+*/
+
+{
+PC += 1;
+if (PC >= DevParm[DevNum].MaxAddr)
+    PC = 0;
+}
+
+/*-------------------------------------------------------------*/
+
+void
+RETPL ()
+
+/*
+** (00)    if (cond) Then Return, Load Pipeline
+*/
+
+{
+if (Cond)
+    {
+    CREG = PipelnPt->Data;
+    PC = SREG;
+    }
+else
+    IncPC ();
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+void
+RETPLN ()
+
+/*
+** (01)    if (cond) Then Teturn Nested, Load Pipeline
+*/
+
+{
+if (Cond)
+    {
+    PC = SREG;
+    SREG = CREG;
+    CREG = PipelnPt->Data;
+    }
+else
+    IncPC ();
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+void
+RET ()
+
+/*
+** (02)    if (cond) Then Return
+*/
+
+{
+if (Cond)
+    PC = SREG;
+else
+    IncPC ();
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+void
+RETN ()
+
+/*
+** (03)    if (cond) Then Return Nested
+*/
+
+{
+if (Cond)
+    {
+    PC = SREG;
+    SREG = CREG;
+    }
+else
+    IncPC ();
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+void
+LDPL ()
+
+/*
+** (04)    if (cond) Then Load Pipeline
+*/
+
+{
+IncPC ();
+if (Cond)
+    CREG = PipelnPt->Data;
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+void
+LDPLN ()
+
+/*
+** (05)    if (cond) Then Load Pipeline, Nexted
+*/
+
+{
+IncPC ();
+if (Cond)
+    {
+    SREG = CREG;
+    CREG = PipelnPt->Data;
+    }
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+void
+LDTM ()
+
+/*
+** (06)    if (cond) Then Load TM
+*/
+
+{
+IncPC ();
+if (Cond)
+    CREG = TM ();
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+void
+LDTMN ()
+
+/*
+** (07)    if (cond) Then Load TM, Nested
+*/
+
+{
+IncPC ();
+if (Cond)
+    {
+    SREG = CREG;
+    CREG = TM ();
+    }
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+void
+LPPL ()
+
+/*
+** (08)    While (CREG <> 0) Loop to Pipeline
+*/
+
+{
+if (CREG != 0)
+    {
+    DecCREG ();
+    PC = PipelnPt->Data;
+    if (PipelnPt->Test == TestEQ [DevNum])
+        {
+        EQ = 0;
+        EQReset = TRUE;
+        }
+    }
+else
+    IncPC ();
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+void
+DEC ()
+
+/*
+** (09)    if (cond) Then Decrement
+*/
+
+{
+IncPC ();
+if (Cond)
+    DecCREG ();
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+void
+LPPLN ()
+
+/*
+** (0A)    While (CREG <> 0) Loop to Pipeline Else Nest
+*/
+
+{
+if (CREG != 0)
+    {
+    DecCREG ();
+    PC = PipelnPt->Data;
+    if (PipelnPt->Test == TestEQ [DevNum])
+        {
+        EQ = 0;
+        EQReset = TRUE;
+        }
+    }
+else
+    {
+    CREG = SREG;
+    IncPC ();
+    }
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+void
+GOTOPLZ ()
+
+/*
+** (0B)    if (CREG = 0) Then Go To Pipeline
+*/
+
+{
+if (CREG == 0)
+    {
+    PC = PipelnPt->Data;
+    if (PipelnPt->Test == TestEQ [DevNum])
+        {
+        EQ = 0;
+        EQReset = TRUE;
+        }
+    }
+else
+    IncPC ();
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+void
+DECPL ()
+
+/*
+** (0C)    While (CREG <> 0) Wait Else Load Pipeline
+*/
+
+{
+if (CREG != 0)
+    {
+    DecCREG ();
+    /* PC = PC */
+    }
+else
+    {
+    CREG = PipelnPt->Data;
+    IncPC ();
+    }
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+void
+CONT ()
+
+/*
+** (0D)    Continue
+*/
+
+{
+IncPC ();
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+void
+DECTM ()
+
+/*
+** (0E)    While (CREG <> 0) Wait Else Load TM
+*/
+
+{
+if (CREG != 0)
+    {
+    DecCREG ();
+    /* PC = PC */
+    }
+else
+    {
+    CREG = TM ();
+    IncPC ();
+    }
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+void
+GOTOTM ()
+
+/*
+** (0F)    if (cond) Then Go To TM
+*/
+
+{
+if (Cond)
+    {
+    PC = TM ();
+    if (PipelnPt->Test == TestEQ [DevNum])
+        {
+        EQ = 0;
+        EQReset = TRUE;
+        }
+    }
+else
+    IncPC ();
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+void
+CMP ()
+
+/*
+** (10-13)    Compare TM to Pipeline (DATA)
+*/
+
+{
+IncPC ();
+EQ |= ((TM () ^ PipelnPt->Const) == 0) ? 1 : 0;
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+void
+PSHPL ()
+
+/*
+** (14)    if (cond) Then Push, Load Pipeline
+*/
+
+{
+IncPC ();
+if (Cond)
+    {
+    CREG = PipelnPt->Data;
+    SREG = PC;
+    }
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+void
+PSH ()
+
+/*
+** (15)    if (cond) Then Push
+*/
+
+{
+IncPC ();
+if (Cond)
+    SREG = PC;
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+void
+PSHTM ()
+
+/*
+** (16)    if (cond) Then Push, Load TM
+*/
+
+{
+IncPC ();
+if (Cond)
+    {
+    CREG = TM ();
+    SREG = PC;
+    }
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+void
+PSHN ()
+
+/*
+** (17)    if (cond) Then Push, Nested
+*/
+
+{
+IncPC ();
+if (Cond)
+    {
+    CREG = SREG;
+    SREG = PC;
+    }
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+void
+FORK ()
+
+/*
+** (18)    if (cond) Then Go To Pipeline Else Go To (SREG)
+*/
+
+{
+if (Cond)
+    {
+    PC = PipelnPt->Data;
+    if (PipelnPt->Test == TestEQ [DevNum])
+        {
+        EQ = 0;
+        EQReset = TRUE;
+        }
+    }
+else
+    PC = SREG;
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+void
+GOTOPL ()
+
+/*
+** (19)    if (cond) Then Go To Pipeline
+*/
+
+{
+if (Cond)
+    {
+    PC = PipelnPt->Data;
+    if (PipelnPt->Test == TestEQ [DevNum])
+        {
+        EQ = 0;
+        EQReset = TRUE;
+        }
+    }
+else
+    IncPC ();
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+void
+WAIT ()
+
+/*
+** (1A)    if (cond) Then Go To Pipeline Else Wait
+*/
+
+{
+if (Cond)
+    {
+    PC = PipelnPt->Data;
+    if (PipelnPt->Test == TestEQ [DevNum])
+        {
+        EQ = 0;
+        EQReset = TRUE;
+        }
+    }
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+void
+DECGOPL ()
+
+/*
+** (1B)    if (cond) Then Go To Pipeline Else While (CREG <> 0) Wait
+*/
+
+{
+if (Cond == FALSE)
+    {
+    if (CREG != 0)
+        DecCREG ();
+        /* PC = PC */
+    else
+        IncPC ();    /* a CONTINUE is executed      */
+    }
+else
+    {
+    PC = PipelnPt->Data;
+    if (PipelnPt->Test == TestEQ [DevNum])
+        {
+        EQ = 0;
+        EQReset = TRUE;
+        }
+    }
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+void
+CALPL ()
+
+/*
+** (1C)    if (cond) Then Call Pipeline
+*/
+
+{
+IncPC ();
+if (Cond)
+    {
+    SREG = PC;
+    PC = PipelnPt->Data;
+    if (PipelnPt->Test == TestEQ [DevNum])
+        {
+        EQ = 0;
+        EQReset = TRUE;
+        }
+    }
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+void
+CALPLN ()
+
+/*
+** (1D)    if (cond) Then Call Pipeline, Nested
+*/
+
+{
+IncPC ();
+if (Cond)
+    {
+    CREG = SREG;
+    SREG = PC;
+    PC = PipelnPt->Data;
+    if (PipelnPt->Test == TestEQ [DevNum])
+        {
+        EQ = 0;
+        EQReset = TRUE;
+        }
+    }
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+void
+CALTM ()
+
+/*
+** (1E)    if (cond) Then Call TM
+*/
+
+{
+IncPC ();
+if (Cond)
+    {
+    SREG = PC;
+    PC = TM ();
+    if (PipelnPt->Test == TestEQ [DevNum])
+        {
+        EQ = 0;
+        EQReset = TRUE;
+        }
+    }
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+void
+CALTMN ()
+
+/*
+** (1F)    if (cond) Then Call TM, Nested
+*/
+
+{
+IncPC ();
+if (Cond)
+    {
+    CREG = SREG;
+    SREG = PC;
+    PC = TM ();
+    if (PipelnPt->Test == TestEQ [DevNum])
+        {
+        EQ = 0;
+        EQReset = TRUE;
+        }
+    }
+}
+
+/*-------------------------------------------------------------*/
+/*
+** Instruction execution routines for Am29PL142
+*/
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+void
+RETPL_2 ()
+
+/*
+** (00)    if (cond) Then Return, Load Pipeline
+*/
+
+{
+if (Cond)
+    {
+    CREG = PipelnPt->Data;
+    PC = TOS;
+    TOS = BOS;
+    }
+else
+    IncPC ();
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+void
+OUTPUT_2 ()
+
+/*
+** (01)    if (cond) Then Output CREG
+*/
+
+{
+IncPC ();
+if (Cond)
+    OutpCREG = TRUE;
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+void
+RET_2 ()
+
+/*
+** (02)    if (cond) Then Return
+*/
+
+{
+if (Cond)
+    {
+    PC = TOS;
+    TOS = BOS;
+    }
+else
+    IncPC ();
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+void
+GOTOSTK_2 ()
+
+/*
+** (03)    if (cond) Then Go To TOS
+*/
+
+{
+if (Cond)
+    {
+    PC = TOS;
+    if (PipelnPt->Test == TestEQ [DevNum])
+        {
+        EQ = 0;
+        EQReset = TRUE;
+        }
+    }
+else
+    IncPC ();
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+void
+PSHCTR_2 ()
+
+/*
+** (05)    if (cond) Then Push Counter
+*/
+
+{
+IncPC ();
+if (Cond)
+    {
+    BOS = TOS;
+    TOS = CREG;
+    }
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+void
+POP_2 ()
+
+/*
+** (07)    if (cond) Then Pop TOS
+*/
+
+{
+IncPC ();
+if (Cond)
+    TOS = BOS;
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+void
+NOP_2 ()
+
+/*
+** (09)    NOP
+*/
+
+{
+IncPC ();
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+void
+LPTM_2 ()
+
+/*
+** (0A)    While (CREG <> 0) Loop to TM
+*/
+
+{
+if (CREG != 0)
+    {
+    DecCREG ();
+    PC = TM ();
+    if (PipelnPt->Test == TestEQ [DevNum])
+        {
+        EQ = 0;
+        EQReset = TRUE;
+        }
+    }
+else
+    IncPC ();
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+void
+CONT_2 ()
+
+/*
+** (0D)    Continue
+*/
+
+{
+IncPC ();
+if (PipelnPt->Test == TestEQ [DevNum])
+    {
+    EQ = 0;
+    EQReset = TRUE;
+    }
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+void
+LPPLN_2 ()
+
+/*
+** (0F)    While (CREG <> 0) Loop to Pipeline Else Nest
+*/
+
+{
+if (CREG != 0)
+    {
+    DecCREG ();
+    PC = TOS;
+    if (PipelnPt->Test == TestEQ [DevNum])
+        {
+        EQ = 0;
+        EQReset = TRUE;
+        }
+    }
+else
+    {
+    CREG = TOS;
+    TOS = BOS;
+    IncPC ();
+    }
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+void
+PSHPL_2 ()
+
+/*
+** (14)    if (cond) Then Push, Load Pipeline
+*/
+
+{
+IncPC ();
+if (Cond)
+    {
+    CREG = PipelnPt->Data;
+    BOS = TOS;
+    TOS = PC;
+    }
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+void
+PSH_2 ()
+
+/*
+** (15)    if (cond) Then Push
+*/
+
+{
+IncPC ();
+if (Cond)
+    {
+    BOS = TOS;
+    TOS = PC;
+    }
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+void
+PSHTM_2 ()
+
+/*
+** (16)    if (cond) Then Push, Load TM
+*/
+
+{
+IncPC ();
+if (Cond)
+    {
+    CREG = TM ();
+    BOS = TOS;
+    TOS = PC;
+    }
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+void
+POPCNTR_2 ()
+
+/*
+** (17)    if (cond) Then Pop TOS into CREG
+*/
+
+{
+IncPC ();
+if (Cond)
+    {
+    CREG = TOS;
+    TOS = BOS;
+    }
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+void
+FORK_2 ()
+
+/*
+** (18)    if (cond) Then Go To Pipeline Else Go To TOS
+*/
+
+{
+if (Cond)
+    {
+    PC = PipelnPt->Data;
+    if (PipelnPt->Test == TestEQ [DevNum])
+        {
+        EQ = 0;
+        EQReset = TRUE;
+        }
+    }
+else
+    PC = TOS;
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+void
+WAITTM_2 ()
+
+/*
+** (1B)    if (cond) Then Go To TM Else Wait
+*/
+
+{
+if (Cond)
+    {
+    PC = TM ();
+    if (PipelnPt->Test == TestEQ [DevNum])
+        {
+        EQ = 0;
+        EQReset = TRUE;
+        }
+    }
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+void
+CALPL_2 ()
+
+/*
+** (1C)    if (cond) Then Call Pipeline
+*/
+
+{
+IncPC ();
+if (Cond)
+    {
+    BOS = TOS;
+    TOS = PC;
+    PC = PipelnPt->Data;
+    if (PipelnPt->Test == TestEQ [DevNum])
+        {
+        EQ = 0;
+        EQReset = TRUE;
+        }
+    }
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+void
+CALTM_2 ()
+
+/*
+** (1E)    if (cond) Then Call TM
+*/
+
+{
+IncPC ();
+if (Cond)
+    {
+    BOS = TOS;
+    TOS = PC;
+    PC = TM ();
+    if (PipelnPt->Test == TestEQ [DevNum])
+        {
+        EQ = 0;
+        EQReset = TRUE;
+        }
+    }
+}
+
+/*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
+
+/* end of instexec.c */
+SHAR_EOF
+cat << \SHAR_EOF > jedec.c
+/***************************************************************\
+**                                                             **
+**    jedec.c  -  Simulator for Am29PL14x Family     v1.03     **
+**                                                             **
+**    Copyright 1987 Advanced Micro Devices, Inc.              **
+**    Written by Gibbons and Associates, Inc.                  **
+**                                                             **
+**    This file contains the JEDEC file processing routines.   **
+**                                                             **
+**    Functions:                                               **
+**       ReadFuse  - read the link state                 **
+**       ConvInst  - convert fuse map to instruction           **
+**       FuseInit  - read the fuse map file                    **
+**                                                             **
+**    Revision 1.01   09/11/87                                 **
+**       The device is in SSR mode only when the SSR fuse is   **
+**       explicitly specified in the jedec file and the state  **
+**       is 1.  The expansion fuse is handled in the same way. **
+**                                                             **
+**       The device code is specified in the first five        **
+**       characters after the STX.                             **
+**                                                             **
+**    Revision 1.03   12/23/87                                 **
+**       The first "[..]" found after STX is the file name.    **
+**       The device code is contained in the following "[..]". **
+**                                                             **
+\***************************************************************/
+
+#include <stdio.h>
+#include <string.h>
+#include "simdcl.h"
+#include "simfunc.h"
+
+/*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
+/*
+** External data declarations
+*/
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+extern            /**** message.c                   */
+char        *DevCode [];    /* device code                 */
+extern
+char        *ErrTbl [];    /* error messages           */
+
+extern            /**** table.c                   */
+struct FldForm     TrInstr [];    /* translate fuse map to instr */
+extern
+struct DevSize     DevParm [];    /* device parameters           */
+
+extern            /**** main.c                           */
+struct Instr     InstrTbl [];    /* instruction table           */
+extern
+FILE        *JedecFil;    /* jedec file pointer           */
+extern
+SMALL        DevNum;        /* device to be simulated      */
+extern
+BOOLEAN        Expansion;    /* expansion fuse           */
+
+
+/*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
+/*
+** Internal data definitions
+*/
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+SMALL        AsciiSum;        /* 16-bit ascii sum    */
+BYTE        FuseLink [FS_BYTES];    /* link state           */
+BYTE        DefMask [FS_BYTES];    /* if link defined     */
+struct MemWord    MemAry [MAX_AD+1];    /* temp storage        */
+BOOLEAN        DftSpec;        /* 'F' specified       */
+
+/*-------------------------------------------------------------*/
+/*
+** Internal function definitions
+*/
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+int
+RdJedec ()
+
+/*
+** This routine returns the next character in the jedec file
+** which is not CR or LF.  It uses getc () to read.
+*/
+
+{
+register int    Ch;
+
+for ( ; (Ch = getc (JedecFil)) != EOF; )
+    {
+    AsciiSum += Ch;
+    if (Ch == CR || Ch == LF)
+              ;
+    else
+              break;
+    }
+return (Ch);
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+void
+SkipAst ()
+
+/*
+** This routine advances file pointer to the first character
+** following an asterisk.
+*/
+
+{
+register int    Ch;
+
+for ( ; (Ch = RdJedec ()) != EOF; )
+    {
+    if ((char)Ch == '*')
+        break;
+    }
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+ERR_CODE
+ReadAddr (Adr)
+
+SMALL        *Adr;        /* starting fuse number        */
+
+/*
+** This routine translates the decimal address string to a
+** binary value.
+*/
+
+{
+ERR_CODE    Error = NO_ERR;
+char        AdrStr [20];
+register char    *s;
+register int    Ch;
+
+for (s = AdrStr, Ch = RdJedec (); ; s++, Ch = RdJedec ())
+    {
+    if ((char)Ch == ' ' || Ch == EOF)
+        {
+        *s = '\0';
+        break;
+        }
+    else
+        *s = (char)Ch;
+    }
+if (ScNum (AdrStr, Adr) != NO_ERR)
+    Error = ERR_JED;
+return (Error);
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+void
+ReadStr (Ptr, Max)
+
+char        *Ptr;        /* storage for the string      */
+SMALL          Max;        /* max # of chars to be scanned*/
+
+/*
+** Reads ASCII characters from the jedec file and stores them
+** in the given string.  It will stop if one of the following
+** conditions is true, an '*' is read, EOF is reached, or the
+** maximum number of characters are read.
+*/
+
+{
+register int    c;
+SMALL         i;
+
+for (i = 0; i < Max; Ptr++, i++)
+    {
+    c = RdJedec ();
+    if ((char)c == '*' || c == EOF)
+        break;
+    else
+        *Ptr = (char)c;
+    }
+*Ptr = '\0';
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+ERR_CODE
+ReadCode ()
+
+/*
+** This routine reads the device code field which is specified
+** in the design specification identifier.  The device code
+** should be "[pl141]", "[pl142]", or "[pl131]".
+*/
+
+{
+ERR_CODE    Error = NO_ERR;
+char            SpecId[129], *DevPt, *Pt;
+SMALL           i;
+BOOLEAN        SkipFile;
+
+ReadStr (SpecId, 128);
+for (DevPt = SpecId, SkipFile = FALSE; *DevPt != '\0'; DevPt++)
+    {
+       if (*DevPt == '[')
+        {
+        if (SkipFile == TRUE)
+            {
+            for (Pt = ++DevPt; *Pt != '\0'; Pt++)
+                {
+                if (*Pt == ']')
+                    {
+                    *Pt = '\0';
+                    break;
+                    }
+                else
+                    *Pt = ToUpper (*Pt);
+                }
+            break;
+            }
+        else
+            SkipFile = TRUE;
+        }
+    }
+for (i = 0; i < MAX_TYP; i++)
+    {
+    if (strcmp (DevPt, DevCode[i]) == 0)
+        break;
+    }
+if (i >= MAX_TYP)
+    Error = ERR_JED;
+else
+    DevNum = i;
+return (Error);
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+ERR_CODE
+ReadDev ()
+
+/*
+** Reads the device being programmed.  It could be 29131,
+** 29141, or 29142.
+*/
+
+{
+ERR_CODE    Error = NO_ERR;
+char        DevNam[21];
+SMALL        i, Temp;
+
+ReadStr (DevNam, 20);
+/*
+for (i = 0; i < MAX_TYP; i++)
+    {
+    if (strcmp (DevNam, DevCode[i]) == 0)
+        {
+        Temp = i;
+        break;
+        }
+    }
+if (i >= MAX_TYP)
+    Error = ERR_JED;
+else
+    DevNum = Temp;
+*/
+return (Error);
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+ERR_CODE
+ReadDft ()
+
+/*
+** Reads the default state for links.
+*/
+
+{
+ERR_CODE    Error = NO_ERR;
+BYTE        DftState = 0;
+SMALL        i;
+
+switch (RdJedec ())
+    {
+    case '0':
+        DftState = 0;
+        break;
+    case '1':
+        DftState = (BYTE)0xFF;
+        break;
+    default:
+        Error = ERR_JED;
+        break;
+    }
+for (i = DevParm[DevNum].FuseByte-1; i >= 0; i--)
+    {
+    FuseLink [i] = DftState;
+    }
+DftSpec = TRUE;
+SkipAst ();
+return (Error);
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+void
+ScatData (Ch, Adr)
+
+int        Ch;        /* link state                  */
+SMALL        Adr;        /* fuse link number            */
+
+/*
+** This routine is responsible to scatter the given link state
+** into three arrays, FuseLink, DefMask, and MemWord.
+*/
+
+{
+register SMALL    ByteOff, WordOff, BitPos, ColBit;
+BYTE        ByteMask;
+INST_FLD    WordMask;
+
+ByteOff = Adr / 8;
+ByteMask = (BYTE)1 << (Adr % 8);
+
+WordOff = Adr / DevParm[DevNum].BtsPerAd;
+ColBit = BitPos = DevParm[DevNum].BtsPerAd - 1 -
+            Adr % DevParm[DevNum].BtsPerAd;
+if (BitPos >= DevParm[DevNum].BtsPerOt)
+    BitPos -= DevParm[DevNum].BtsPerOt;
+WordMask = (INST_FLD)1 << BitPos;
+
+DefMask[ByteOff] &= ~ByteMask;
+if (Ch == '0')
+    {                /* the 0 link is burned*/
+    FuseLink [ByteOff] &= ~ByteMask;
+    if (ColBit < DevParm[DevNum].BtsPerOt)
+        MemAry[WordOff].Lower |= WordMask;
+    else
+        MemAry[WordOff].Upper |= WordMask;
+    }
+else
+    {
+    FuseLink [ByteOff] |= ByteMask;
+    if (ColBit < DevParm[DevNum].BtsPerOt)
+        MemAry[WordOff].Lower &= ~WordMask;
+    else
+        MemAry[WordOff].Upper &= ~WordMask;
+    }
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+ERR_CODE
+ReadLink ()
+
+/*
+** Reads the link information.
+*/
+
+{
+ERR_CODE    Error = NO_ERR;
+SMALL        Adr;
+BOOLEAN        Done;
+register int    Ch;
+
+if ((Error = ReadAddr (&Adr)) == NO_ERR)
+    {
+    for (Done = FALSE; !Done && Error == NO_ERR; )
+        {
+        Ch = RdJedec ();
+        if ((char)Ch == '*' || Ch == EOF)
+            Done = TRUE;
+        else
+            {
+            if ((char)Ch == '0' || (char)Ch == '1')
+                {
+                if (Adr < DevParm[DevNum].MaxFuse)
+                    ScatData (Ch, Adr++);
+                else
+                    Error = ERR_JMOR;
+                }
+            else
+                if (Ch != ' ')
+                    Error = ERR_JED;
+            }
+        }
+    }
+return (Error);
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+ERR_CODE
+ChAllDef ()
+
+/*
+** Checks if all device links are defined in the "L" field.
+*/
+
+{
+ERR_CODE    Error = NO_ERR;
+SMALL        MaxFsBt, i;
+register SMALL    ORChk;
+
+MaxFsBt = DevParm[DevNum].FuseByte;
+
+if ((DefMask [MaxFsBt-1] & 2) == 0 &&    /* it is specified    */
+    (FuseLink [MaxFsBt-1] & 2))        /* and the state is 1   */
+    Expansion = TRUE;
+else
+    Expansion = FALSE;
+if ((DefMask [MaxFsBt-1] & 1) == 0 &&    /* it is specified    */
+    (FuseLink [MaxFsBt-1] & 1))        /* and the state is 1    */
+    Error = ERR_SSR;
+
+if ( ! DftSpec && Error == NO_ERR)
+    {
+    for (i = MaxFsBt-2, ORChk = 0; i >= 0; i--)
+        {
+        ORChk |= DefMask[i];    /* SSR are not required    */
+        }
+    if (ORChk)
+        Error = ERR_JLES;
+    }
+return (Error);
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+ERR_CODE
+ReadChk ()
+
+/*
+** This routine checks the link information checksum.  The link
+** information checksum is computed by performing a 16 bit
+** addition of 8 bit words constructed from the specified state
+** of each link in the device.
+*/
+
+{
+ERR_CODE    Error = NO_ERR;
+SMALL        ChkSum;
+register SMALL    Sum, i;
+char        SumStr[21];
+
+ReadStr (SumStr, 20);
+strcat (SumStr, "#H");
+if (ScNum (SumStr, &ChkSum) == NO_ERR)
+    {
+    i = DevParm [DevNum].FuseByte - 1;
+    FuseLink [i] &= ~(DefMask [i]);
+    for (Sum = 0; i >= 0; i--)
+        Sum += (FuseLink[i] & 0xFF);
+    if (ChkSum != Sum)
+        Error = ERR_CHK;
+    }
+else
+    Error = ERR_CHK;
+return (Error);
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+ERR_CODE
+ETXCheck ()
+
+/*
+** Checks the sum-check after ETX.  The sum-check is the 16-bit
+** sum of the ASCII values of the characters between, and
+** including the STX and ETX.
+*/
+
+{
+ERR_CODE    Error = NO_ERR;
+SMALL        Sum;
+char        HexStr[20];
+register char    *s;
+register int    i, c;
+
+for (i = 0, s = HexStr; i < 4; i++)
+    {
+    c = getc (JedecFil);
+    if (c == EOF)
+        {
+        Error = ERR_CHK;
+        break;
+        }
+    else
+        *s++ = (char)c;
+    }
+if (Error == NO_ERR)
+    {
+    *s = '\0';
+    strcat (HexStr, "#H");
+    if (ScNum (HexStr, &Sum) == NO_ERR)
+        {
+        if (Sum != AsciiSum)
+            Error = ERR_CHK;
+        }
+    else
+        Error = ERR_CHK;
+    }
+return (Error);
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+ERR_CODE
+ReadFuse ()
+
+/*
+** This routine reads the link state specified in the fuse map
+** file and keeps them in three data structures.  It verifies
+** the checksum to insure the integrity of the file.  It also
+** makes sure that all fuses are defined.
+*/
+
+{
+ERR_CODE        Error = NO_ERR;
+register int        Ch, i;
+
+AsciiSum = 0;
+DftSpec = FALSE;
+
+if (RdJedec () != STX)
+    Error = ERR_JED;
+else
+    {
+      Error = ReadCode ();
+    Ch = RdJedec ();
+    if (Error == NO_ERR)
+        {
+        if (Ch == 'D')
+            {
+            Error = ReadDev ();
+            Ch = RdJedec ();
+            }
+        }
+    if (Error == NO_ERR)
+        {
+        for (i = DevParm[DevNum].FuseByte - 1; i >= 0; i--)
+            DefMask [i] = (BYTE)0xFF;
+        if (Ch == 'F')
+            {
+            Error = ReadDft ();
+            Ch = RdJedec ();
+            }
+        }
+    while (Error == NO_ERR && Ch == 'L')
+        {
+        Error = ReadLink ();
+        Ch = RdJedec ();
+        }
+    if (Error == NO_ERR)
+        Error = ChAllDef ();
+    if (Error == NO_ERR)
+        {
+        if (Ch == 'C')
+            {
+            Error = ReadChk ();
+            Ch = RdJedec ();
+            }
+        }
+    if (Error == NO_ERR)
+        {
+        for (;;)
+            {
+            if (Ch == ETX)
+                break;
+            if (Ch == (char)EOF)
+                {
+                Error = ERR_JED;
+                break;
+                }
+            SkipAst ();
+            Ch = RdJedec ();
+            }
+        }
+    if (Error == NO_ERR)
+        {
+        Error = ETXCheck ();
+        }
+    }
+
+if (Error != NO_ERR)
+    fprintf (stderr, ErrTbl[Error]);
+return (Error);
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+void
+ConvInst (Inst, Output, InstPt)
+
+INST_FLD    Inst;        /* upper part of memory word   */
+OUT_FLD        Output;        /* lower part of memory word   */
+struct Instr    *InstPt;    /* ptr to instruction storage  */
+
+/*
+** This routine takes three arguments, the microinstruction word,
+** the output word, and a pointer to the internal data structure
+** for an instruction.  It converts the value of a memory word
+** into understandable fields of an instruction.
+*/
+
+{
+register struct FldForm    *TrFldPt;
+register SML_FLD    TmpFld;
+
+TrFldPt = &TrInstr[DevNum];
+
+TmpFld = (SML_FLD)(Inst >> TrFldPt->TrOE.Shift);
+InstPt->OE = (BOOLEAN) (TmpFld & TrFldPt->TrOE.Mask);
+
+TmpFld = (SML_FLD)(Inst >> TrFldPt->TrOpcode.Shift);
+InstPt->Opcode = (TmpFld & TrFldPt->TrOpcode.Mask);
+
+if (InstPt->Opcode < CMP_LOW || InstPt->Opcode > CMP_HIGH)
+    {
+    TmpFld = (SML_FLD)(Inst >> TrFldPt->TrPol.Shift);
+    InstPt->Pol = (BOOLEAN) (TmpFld & TrFldPt->TrPol.Mask);
+    TmpFld = (SML_FLD)(Inst >> TrFldPt->TrTest.Shift);
+    InstPt->Test = (TmpFld & TrFldPt->TrTest.Mask);
+    }
+else
+    {
+    TmpFld = (SML_FLD)(Inst >> TrFldPt->TrConst.Shift);
+    InstPt->Const = (TmpFld & TrFldPt->TrConst.Mask);
+    }
+
+TmpFld = (SML_FLD)(Inst >> TrFldPt->TrData.Shift);
+InstPt->Data = (TmpFld & TrFldPt->TrData.Mask);
+
+InstPt->Outputs = Output;
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+ERR_CODE
+FuseInit ()
+
+/*
+** This routine reads the fuse map file and translates the data
+** into the internal microinstruction representation.
+*/
+
+{
+ERR_CODE    Error;
+register SMALL    i;
+
+Error = ReadFuse ();
+if (Error == NO_ERR)
+    {
+    for (i = 0; i < DevParm[DevNum].MaxAddr; i++)
+        ConvInst (MemAry[i].Upper, MemAry[i].Lower,
+                &InstrTbl[i]);
+    }
+return (Error);
+}
+
+/*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
+
+/* end of jedec.c */
+SHAR_EOF
+cat << \SHAR_EOF > main.c
+/***************************************************************\
+**                                                             **
+**    main.c  -  Simulator for Am29PL14x Family     v1.02      **
+**                                                             **
+**    Copyright 1987 Advanced Micro Devices, Inc.              **
+**    Written by Gibbons and Associates, Inc.                  **
+**                                                             **
+**    This file contains the main entry and the overall        **
+**    control routines.                                        **
+**                                                             **
+**    Functions:                                               **
+**       EvalTest  - evaluate test condition                **
+**     OutpChk   - compare vector output with output state   **
+**       SimStep   - simulation stepping                       **
+**       SimCtrl   - overall control flow                      **
+**     Init       - initialize global variables           **
+**       FileInit  - read fuse map and test vector file        **
+**       main      - main entry                                **
+**                                                             **
+**    Revision 1.02   10/27/87                                 **
+**       When EXP fuse is blown, the pc value of 7F#h appears  **
+**       on the second test vector.                        **
+**                                                             **
+**       Output instruction still works even when EXP fuse is  **
+**       blown.                                                **
+**                                                             **
+**       Output instruction is executed depending on the       **
+**       condition being tested.                        **
+**                                                             **
+\***************************************************************/
+
+#include <stdio.h>
+#include "simdcl.h"
+#include "simfunc.h"
+
+/*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
+/*
+** External data declarations
+*/
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+extern            /**** table.c                   */
+OUT_FLD        OEMask [];    /* mask for tri-state bits     */
+extern
+struct DevSize    DevParm [];    /* device dependent parameters */
+extern
+SMALL        TstPin [MAX_TYP][8];    /* test input           */
+extern
+SMALL        CCPin [MAX_TYP][2];    /* CC input           */
+extern
+SMALL        ResetPin [MAX_TYP][2];    /* reset input           */
+extern
+SMALL        OutPin [MAX_TYP][17];    /* output pin          */
+extern
+SMALL        ZeroPin [MAX_TYP];    /* zero output pin     */
+extern
+struct PinInfo     PinList [MAX_TYP][MAX_PIN+1];/* pin information*/
+
+extern            /**** message.c                   */
+char        *MsgTbl [];    /* regular messages           */
+extern
+char        *ErrTbl [];    /* error messages           */
+extern
+char        *DspLin [];    /* step display               */
+extern
+char        *DevCode [];    /* device code               */
+
+extern            /**** instexec.c               */
+struct OpInfo    OpDesc [MAX_TYP][MAX_OP];
+                /* instruction exec procedures */
+
+extern            /**** vector.c                   */
+SMALL        VectNum;    /* current test vector scanned */
+
+
+/*-------------------------------------------------------------*/
+/*
+** Internal data definitions
+*/
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+struct Instr     Jam;        /* jammed instruction           */
+struct Instr    *PipelnPt;    /* current pipeline register   */
+struct Instr    InstrTbl [MAX_AD];
+
+BOOLEAN    EQ;        /* branch control EQ flag                 */
+SML_FLD    PC;        /* program counter                        */
+SML_FLD CREG;           /* counter register                       */
+SML_FLD SREG;           /* subroutine register                    */
+SML_FLD    TOS;        /* top of stack                   */
+SML_FLD    BOS;        /* bottom of stack               */
+
+OUT_FLD    PMask;        /* defined and not don't care          */
+OUT_FLD PVect;        /* test output high                    */
+OUT_FLD PHiZ;        /* test output for high impedance      */
+OUT_FLD    POut;        /* value for outputs               */
+SML_FLD ZeroMask;    /* defined and not don't care          */
+SML_FLD ZeroVect;    /* value for zero test                 */
+SML_FLD    ZeroOut;    /* value for zero output           */
+
+SML_FLD    ClockIn;    /* clock input                 */
+SML_FLD    RstIn;        /* synchronous reset input           */
+SML_FLD    RstInX;        /* don't care input               */
+SML_FLD    RstInPipe;    /* reset input used by instr           */
+SML_FLD RstInXPipe;    /* don't care used by instr           */
+SML_FLD    CCIn;        /* condition code input from vector    */
+SML_FLD    CCInX;        /* condition code don't care mask      */
+SML_FLD CCInPipe;    /* cond code input used by instr       */
+SML_FLD CCInXPipe;    /* don't care input used by instr      */
+SML_FLD TIn;        /* test inputs from vector           */
+SML_FLD    TInX;        /* don't care test inputs              */
+SML_FLD    TInPipe;    /* test inputs used by instr           */
+SML_FLD    TInXPipe;    /* don't care used by instr           */
+
+SMALL    DevNum;        /* device to be simulated           */
+SMALL    Mode;        /* simulator control mode                 */
+SMALL    RunMode;    /* running mode                   */
+SMALL    CumErrCt;    /* cumulative error count           */
+            /* +1 for each simulation error        */
+SMALL    DftX;        /* default value for don't care bit    */
+
+BOOLEAN Expansion;      /* expansion fuse                         */
+BOOLEAN    ConDisp;    /* output to the console           */
+BOOLEAN    RegDisp;    /* display internal registers           */
+BOOLEAN    BrkOnErr;    /* break on next occurrence of error   */
+BOOLEAN    EndVect;    /* end of test vector input file       */
+BOOLEAN    OutpCREG;    /* counter can be sent to outputs      */
+BOOLEAN ShowCREG;       /* if output creg, no expansion           */
+BOOLEAN    Break [MAX_AD];    /* break point                   */
+BOOLEAN    Cond;        /* test condition               */
+BOOLEAN    FirstVct;    /* if simulate the very first vector   */
+BOOLEAN EQReset;    /* true if EQ flag will be reset       */
+
+ERR_CODE VectErr;    /* error reading test vectors           */
+
+FILE    *JedecFil;    /* jedec file pointer               */
+FILE    *VectFil;    /* test vector file               */
+FILE    *OutpFil;    /* output file                   */
+
+#ifdef    DEBUG
+struct DbgAnaly Analysis [MAX_OP];
+#endif
+
+/*-------------------------------------------------------------*/
+/*
+** Internal function definitions
+*/
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+BOOLEAN
+EvalTest (Inst)
+
+struct Instr    *Inst;
+
+/*
+** This routine evaluates the test condition value according
+** to the test condition select logic.
+*/
+
+{
+BOOLEAN        TestCond;
+SML_FLD        Mask;
+
+if (Inst->Test <= 5 || (DevNum == PL142 && Inst->Test == 6))
+    {
+    Mask = 1 << Inst->Test;
+    /*
+    if (TInXPipe & Mask)
+        PinList [DevNum] [TstPin [DevNum][Inst->Test]].ErrFlag =
+            TRUE;
+    */
+    TestCond = TInPipe & Mask;
+    }
+else
+    {
+    if ((DevNum != PL142 && Inst->Test == 6) ||
+        (DevNum == PL142 && Inst->Test == 7))
+        {
+        /*
+        if (CCInXPipe & 1)
+            PinList [DevNum][CCPin[DevNum][0]].ErrFlag=TRUE;
+        */
+        TestCond = CCInPipe;
+        }
+    else
+        {
+        if ((DevNum != PL142 && Inst->Test == 7) ||
+            (DevNum == PL142 && Inst->Test == 8))
+            TestCond = EQ;
+        else
+            {
+            if (Inst->Test == 9)
+                TestCond = (CREG == 0);
+            else
+                TestCond = UNCOND;
+            }
+        }
+    }
+
+if (Inst->Pol)
+    TestCond = (TestCond) ? FALSE : TRUE;
+return (TestCond);
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+void
+OutpChk ()
+
+/*
+** During each instruction's execution, the output state is
+** determined for the Zero flag and the output bits.  The
+** output enables are also determined and this is reflected in
+** a set of tristate bits for the outputs.  This routine
+** compares the output state with the output specified by the
+** vector and marks error if necessary.
+*/
+
+{
+register OUT_FLD PErr;
+SMALL        i, Mask, PinNum;
+
+if (DevNum == PL141)
+    {
+    if (ZeroMask & (ZeroVect ^ ZeroOut))
+        PinList [DevNum] [ZeroPin[DevNum]].ErrFlag=TRUE;
+    }
+
+if (PipelnPt != NULL)
+    {
+    if (!ShowCREG)
+        {
+        if (Expansion)
+            {
+            POut &= ~OUT_MASK;
+            POut |= PC << 8;
+            }
+        }
+    PErr = PMask
+           & (PHiZ
+          ^ (PipelnPt->OE ? 0 : OEMask [DevNum])
+         );
+    PMask &= (~PHiZ);
+    PErr |= PMask & (PVect ^ POut);
+    }
+else
+    {
+    if ((!Expansion) || (PC == UNDEFINE))
+        PErr = PMask;
+    else
+        {
+        POut = PC << 8;
+        PErr = PMask & PHiZ;
+        PMask &= (~PHiZ);
+        PErr |= PMask & (PVect ^ POut);
+        PErr |= PMask & ~OUT_MASK;
+        }
+    }
+for (i = 0, Mask = 1; (PinNum = OutPin [DevNum][i]) != 0;
+    i++, Mask = Mask << 1)
+    if (PErr & Mask)
+        PinList [DevNum] [PinNum].ErrFlag = TRUE;
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+void
+SimStep ()
+
+/*
+** This routine handles one simulation stepping.
+*/
+
+{
+SMALL        OrgCt;
+ERR_CODE     SimErr;        /* simulation error             */
+
+SimErr = NO_ERR;
+if ((VectErr = ReadVect ()) == EOF)
+    {
+    EndVect = TRUE;
+    VectErr = NO_ERR;
+    }
+else
+    {
+    if (VectErr == NO_ERR)
+    {
+    OrgCt = CumErrCt;
+    /*
+    if (RstInXPipe & 1)
+        PinList [DevNum][ResetPin[DevNum][0]].ErrFlag = TRUE;
+    */
+    if (FirstVct)
+        {
+        FirstVct = FALSE;
+        if (RstIn != 0)
+        {
+        if (DevNum == PL141)
+            {
+            PC = DevParm[DevNum].MaxAddr - 1;
+            EQ = 0;
+            }
+        else
+            {
+            RstInPipe = 0;
+            }
+        }
+        }
+    if (PipelnPt != &Jam)
+        {
+        if (PC < DevParm [DevNum].MaxAddr && PC >= 0)
+        PipelnPt = &InstrTbl [PC];
+        else
+        PipelnPt = NULL;
+        }
+    if (PipelnPt != NULL)
+        {
+        POut = PipelnPt->Outputs;
+        if (OutpCREG)
+            {
+            POut &= ~OUT_MASK;
+            POut |= CREG << 8;
+            ShowCREG = TRUE;
+            }
+        else
+        ShowCREG = FALSE;
+        if (OpDesc[DevNum][PipelnPt->Opcode].CondSel)
+            Cond = EvalTest (PipelnPt);
+        }
+    if (CREG != UNDEFINE)
+        ZeroOut = (CREG == 0) ? 0 : 1;
+    else
+        ZeroOut = ~ZeroVect;
+
+    EQReset = FALSE;
+    if (ConDisp || OutpFil != NULL)
+        if (RegDisp)
+        FillReg ();
+    if (ClockIn == 1)
+        {
+        OutpCREG = FALSE;
+        if (RstInPipe == 0)
+        {
+        PC = DevParm[DevNum].MaxAddr - 1;
+        EQ = 0;
+        }
+        else
+        {
+        if (PipelnPt != NULL)
+            {
+            (*OpDesc[DevNum][PipelnPt->Opcode].Exec) ();
+
+#ifdef DEBUG
+Analysis[PipelnPt->Opcode].CumCnt += 1;
+if (Cond)
+    Analysis[PipelnPt->Opcode].TrueCond += 1;
+else
+    Analysis[PipelnPt->Opcode].FalsCond += 1;
+Analysis[PipelnPt->Opcode].TestCond[PipelnPt->Test] += 1;
+#endif
+
+            }
+        else
+            {
+            if (RstIn)
+            fprintf (stderr, ErrTbl[SimErr=ERR_PC]);
+            }
+        }
+        }    /* if at clock edge */
+    OutpChk ();
+    DispGen ();
+    PipelnPt = NULL;
+    if (CumErrCt > OrgCt)
+        SimErr = ~NO_ERR;
+    }
+    }
+if ( (SimErr && BrkOnErr) ||
+    (Break [PC] && PC >= 0 && PC < DevParm[DevNum].MaxAddr))
+    {             /* break can switch to CMD mode */
+    fprintf (stderr, MsgTbl[MSG_BRK], PC);
+    Mode = CMD;
+    }
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+void
+SimCtrl ()
+
+/*
+** Shows the overall control flow.
+*/
+
+{
+BOOLEAN        Done;
+
+Done = OutpCREG = ShowCREG = EndVect = FALSE;
+VectErr = NO_ERR;
+CumErrCt = 0;
+FirstVct = TRUE;
+if (DftX == 1)
+    {
+    TIn = (SML_FLD)0xFFFF;
+    TInX = 0;
+    }
+else if (DftX == 0)
+    {
+    TIn = 0;
+    TInX = 0;
+    }
+else
+    {
+    TIn = 0;
+    TInX = (SML_FLD)0xFFFF;
+    }
+CCIn = TIn;
+RstIn = 1;            /* assume reset starts high    */
+RstInX = CCInX = TInX;
+
+if (RunMode == SS)
+    fprintf (stderr, MsgTbl [MSG_INST]);
+else
+    Mode = CS;
+while (! Done && ! VectErr)
+    {
+    switch (Mode)
+        {
+        case SS:
+            {
+            SimStep ();
+            Mode = CMD;
+            /* end vectors switches to EXIT mode */
+            if (EndVect)
+                Mode = EXIT;
+            break;
+            }
+        case CS:
+            {
+            SimStep ();
+            /* end vectors switches to EXIT mode */
+            if (EndVect)
+                Mode = EXIT;
+            break;
+            }
+        case CMD:
+            {
+            /* fetch and execute command */
+            /* mode may be changed by command */
+            /* EX command can set Done */
+
+            fprintf (stderr, MsgTbl [MSG_PRMP]);
+            ScanCmd ();
+            break;
+            }
+        case EXIT:
+            {
+            /* show end summary */
+            if (ConDisp)
+                fprintf (stdout, DspLin[0]);
+            if (OutpFil != NULL)
+                fprintf (OutpFil, DspLin[0]);
+            fprintf (stderr, MsgTbl [MSG_COMP], CumErrCt);
+            Done = TRUE;
+            break;
+            }
+        }
+    }
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+void
+Init ()
+
+/*
+** Initializes global variables.
+*/
+
+{
+register SMALL    i;
+
+Mode = CMD;                /* assume single step    */
+RunMode = SS;
+ConDisp = RegDisp = TRUE;        /* disp to console & reg*/
+BrkOnErr = FALSE;            /* no break on error    */
+DftX = -1;                /* assume not specified */
+JedecFil = VectFil = OutpFil = (FILE *)NULL;
+PipelnPt = NULL;
+PC = CREG = SREG = TOS = BOS = EQ = UNDEFINE;
+DevNum = PL141;                /* 29141 if nothing spec*/
+for (i = 0; i < MAX_AD; i++)        /* clear break points    */
+    Break [i] = FALSE;
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+ERR_CODE
+FileInit ()
+
+/*
+** Calls routine FuseInit () to read the fuse map and translate
+** them to the internal microinstruction format.  It then calls
+** VectInit () to read the vector header, build pin declarations,
+** etc.
+*/
+
+{
+ERR_CODE    Error ;
+register SMALL    MaxAdr;
+
+Error = FuseInit ();
+if (Error == NO_ERR)
+     {
+    MaxAdr = DevParm[DevNum].MaxAddr;
+    if (
+        ((PC != UNDEFINE) && (PC < 0 || PC >= MaxAdr)) ||
+        ((CREG != UNDEFINE) && (CREG < 0 || CREG >= MaxAdr)) ||
+        ((SREG != UNDEFINE) && (SREG < 0 || SREG >= MaxAdr)) ||
+        ((TOS != UNDEFINE) && (TOS < 0 || TOS >= MaxAdr)) ||
+        ((BOS != UNDEFINE) && (BOS < 0 || BOS >= MaxAdr))
+       )
+        fprintf (stderr, ErrTbl [Error = ERR_REG]);
+    if (Error == NO_ERR)
+        Error = VectInit ();
+    }
+return (Error);
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+void
+main (argc, argv)
+
+int        argc;
+char        *argv[];
+
+{
+ERR_CODE    Error;
+
+#ifdef DEBUG
+int        DbgSiz, n;
+FILE        *Dbg;
+char        DbgFil [10];
+#endif
+
+fprintf (stderr, MsgTbl [MSG_VERS]);
+Init ();
+Error = ScanOpt (argc, argv);
+if (Error == NO_ERR)
+    {
+    Error = FileInit ();
+    if (Error == NO_ERR)
+        {
+
+#ifdef DEBUG
+n = 0;
+DbgSiz = sizeof(struct DbgAnaly) * MAX_OP;
+sprintf (DbgFil, "dbg%s", DevCode[DevNum]+2);
+Dbg = fopen (DbgFil, "r+b");
+if (Dbg == NULL)
+    printf ("ERROR - open debug file\n");
+else
+    {
+    if ((n = fread (Analysis, 1, DbgSiz, Dbg)) != DbgSiz)
+        printf ("ERROR - read debug file\n");
+    }
+#endif
+
+        DispInit ();
+        SimCtrl ();
+
+#ifdef DEBUG
+if (n == DbgSiz)
+    {
+    fseek (Dbg, 0L, SEEK_SET);
+    if ((n = fwrite (Analysis, 1, DbgSiz, Dbg)) != DbgSiz)
+        printf ("ERROR - write debug file\n");
+    }
+if (Dbg != NULL)
+    fclose (Dbg);
+#endif
+
+        }
+    }
+if (JedecFil != NULL)
+    fclose (JedecFil);
+if (VectFil != NULL)
+    fclose (VectFil);
+if (OutpFil != NULL)
+    fclose (OutpFil);
+}
+
+/*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
+
+/* end of main.c */
+SHAR_EOF
+cat << \SHAR_EOF > makefile.
+#
+# Simulator for Am29PL14x Family        v1.00
+# vaxsim - makefile running on AMD's VAX
+#
+# Copyright 1987 Advanced Micro Devices, Inc.
+# Written by Gibbons and Associates, Inc.
+#
+# This file governs the building of the simulator.
+#
+
+c.o:
+    $(CC) $(CFLAGS) -DVAX -c $*.c
+CFLAGS = -O
+LINT = lint -phbxac
+OBJECTS = cmd.o disp.o instexec.o jedec.o main.o message.o \
+        table.o util.o vector.o
+LIBES = -lc
+
+sim14x: $(OBJECTS)
+    cc $(CFLAGS) $(OBJECTS) $(LIBES) -o sim14x
+
+lint:
+    $(LINT) cmd.c disp.c instexec.c jedec.c main.c message.c \
+    table.c util.c vector.c
+
+cmd.o:        simdcl.h simfunc.h cmd.c
+disp.o:        simdcl.h simfunc.h disp.c
+instexec.o:    simdcl.h simfunc.h instexec.c
+jedec.o:    simdcl.h simfunc.h jedec.c
+main.o:        simdcl.h simfunc.h main.c
+message.o:    simdcl.h message.c
+table.o:    simdcl.h table.c
+util.o:        simdcl.h util.c
+vector.o:    simdcl.h simfunc.h vector.c
+
+SHAR_EOF
+cat << \SHAR_EOF > message.c
+/****************************************************************\
+**                                                              **
+**    message.c  -  Simulator for Am29PL14x Family    v1.03     **
+**                                                              **
+**    Copyright 1987 Advanced Micro Devices, Inc.               **
+**    Written by Gibbons and Associates, Inc.                   **
+**                                                              **
+**    The file contains all the error and other messages.       **
+**                                                              **
+**    Revision 1.02   10/27/87                                  **
+**      Option screen is improved.                             **
+**                                                              **
+**       Fix spelling error for the LDTMN instruction.          **
+**                                                              **
+**    Revision 1.03   12/23/87                                  **
+**     Change version message.                    **
+**                                                              **
+\****************************************************************/
+
+#include <stdio.h>
+#include "simdcl.h"
+
+/*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
+
+char    *DevCode [MAX_TYP] =        /* device code        */
+{
+    "PL131",
+    "PL141",
+    "PL142"
+};
+
+/*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
+
+char    *KeyWord [] =
+{
+"ERR",
+"HEADER",
+"PIN",
+"VECTORS",
+"IN",
+"OUT",
+"BEGIN",
+"END."
+};
+
+/*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
+
+char    *HelpMsg [] =
+{
+"\nCommands:\n",
+"LP [number]------> Load Program Counter (PC)\n",
+"LC [number]------> Load Count Register (CREG)\n",
+"LS [number]------> Load Subroutine Register (SREG)\n",
+"LT [number]------> Load Top of Stack (TOS)\n",
+"LB [number]------> Load Bottom of Stack (BOS)\n",
+"RL --------------> Replace Pipeline Register\n",
+"SQ --------------> Set EQ flag\n",
+"RQ --------------> Reset EQ flag\n",
+"SS --------------> Set single step mode\n",
+"CS --------------> Cancel single step mode\n",
+"SB [addr, ....]--> Set break point at memory address\n",
+"CB [addr, ....]--> Cancel break point\n",
+"CBA -------------> Cancal all break points\n",
+"DB --------------> Display break points\n",
+"RUN [prog]-------> Run another program\n",
+"BE --------------> Break at the next occurrence of an error\n",
+"EX --------------> Terminate simulation and exit to OS\n",
+"H  --------------> Display help messages\n",
+"<CR> ------------> Continue simulation\n",
+NULL
+};
+
+/*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
+
+char    *OptMsg [] =
+{
+"Usage:\n",
+"    sim14x [-esr] [-b val] [-x val] [-o outfile]\n",
+"           [-p val] -n testfile jedfile\n",
+"\n",
+"    -e    Suppress output to CRT\n",
+"    -s    Suppress single step mode\n",
+"    -r    Suppress displaying internal registers\n",
+"    -b        Set break point (value can be a Decimal number or a\n",
+"                  Hex number or ERR for break on error)\n",
+"    -x    Set default value for X in test vectors (value can be\n",
+"                  0 or 1)\n",
+"    -o    Specify an output file name\n",
+"    -p    Preload internal registers (Any of the internal registers\n",
+"                  can be loaded as follows:\n",
+"                    CREG -- c val       SREG -- s val\n",
+"                    TOS  -- t val       BOS  -- b val\n",
+"                    PC   -- p val       EQ   -- e val\n",
+"                  val can be a Decimal number or a Hex number. For\n",
+"                  EQ, val is 0 or 1)\n",
+"    -n     Specify input test vector file\n",
+"    jedfile    Specify the jedec fusemap file\n",
+NULL
+};
+
+/*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
+
+char    *MsgTbl [] =
+{
+                        /* MSG_VERS    */
+"Am29PL14X Simulator  Version 4.1   December 1987\n\n",
+                        /* MSG_INST    */
+"Enter command or Hit <CR> to continue or Type 'H' for help\n",
+                        /* MSG_PRMP    */
+"! ",
+                        /* MSG_BRK    */
+"At breakpoint - address = %d\n",
+                        /* MSG_COMP    */
+"Simulation completed    %d simulation error(s) found\n",
+                        /* MSG_PL    */
+"Current PL contents loaded from ROM address",
+                        /* MSG_PLJR    */
+"Current PL contents loaded by the user\n",
+                        /* MSG_PLX    */
+"Current PL contents are undefined\n",
+
+"","",
+                        /* MSG_PC    */
+"PC = ",
+                        /* MSG_CREG    */
+"CREG = ",
+                        /* MSG_SREG    */
+"SREG = ",
+                        /* MSG_BP    */
+"Break point = ",
+                        /* MSG_OE    */
+"OE = ",
+                        /* MSG_OP    */
+"OPCODE = ",
+                        /* MSG_POL    */
+"POL = ",
+                        /* MSG_TEST    */
+"TEST = ",
+                        /* MSG_DATA    */
+"DATA = ",
+                        /* MSG_OUT    */
+"OUTPUTS = ",
+                        /* MSG_CONST    */
+"CONST = ",
+                        /* MSG_TOS    */
+"TOS = ",
+                        /* MSG_BOS    */
+"BOS = ",
+                        /* MSG_UNDF    */
+"undefined"
+};
+
+/*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
+
+char    *ErrTbl [] =
+{
+                        /* NO_ERR    */
+"",
+                        /* ERR_OPT    */
+"Invalid option \"%s\"\n",
+                        /* ERR_PARM    */
+"Invalid parameter - %s\n",
+                        /* ERR_OPEN    */
+"Cannot open file - %s\n",
+                        /* ERR_SIM    */
+"Invalid device in the test vector file - %s\nIt is different from the one
+ specified in the JEDEC file\n",
+                        /* ERR_LAST    */
+"Invalid option \"%s\"\nAll the options should come before the JEDEC file
+ name\n",
+                        /* ERR_VMIS    */
+"Test vector file name is missing\n",
+                        /* ERR_JMIS    */
+"JEDEC file name is missing\n",
+                        /* ERR_NUM    */
+"Invalid number - %s\n",
+
+"",
+                        /* ERR_JED    */
+"Incorrect format of JEDEC fuse map file\n",
+                        /* ERR_JMOR    */
+"Number of fuse links exceeds the maximum allowed\n",
+                        /* ERR_JLES    */
+"All device links must be defined in the L field\n",
+                        /* ERR_CHK    */
+"Checksum error in JEDEC fuse map file\n",
+                        /* ERR_SSR    */
+"SSR diagnostic mode is not supported\n",
+                        /* ERR_REG    */
+"Invalid preloaded register(s)\n",
+
+"","","","",
+                        /* ERR_KEY    */
+"A key symbol is missing - %s\n",
+                        /* ERR_PINN    */
+"Invalid pin number - %s\n",
+                        /* ERR_PIN    */
+"Unknown pin - %s\n",
+                        /* ERR_SYMB    */
+"Invalid key symbol - %s\n",
+                        /* ERR_IO    */
+"Invalid input/output pin declaration - %s\n",
+                        /* ERR_VNUM    */
+"There are more than 10,000 test vectors generated\n",
+                        /* ERR_VMOR    */
+"Vector number %d has more than %d fields\n",
+                        /* ERR_VLES    */
+"Vector number %d is missing %d field(s)\n",
+
+"","",
+                        /* ERR_CMD    */
+"Invalid command - %s\n",
+                        /* ERR_PC    */
+"Invalid PC\n",
+                        /* ERR_INP    */
+"Invalid input - %s\n"
+};
+
+/*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
+
+char    *DspLin [MAX_LINE] =
+{
+"------------------------------------------------------------------------------\
+n",
+"V0000           INPUT              |             OUTPUT
+ \n",
+"                                   |
+ \n",
+"                                   |
+ \n",
+"Pin                                |
+ \n",
+"Name:                              |
+ \n",
+"                                   |
+ \n",
+"                                   |
+ \n",
+"Pin#:                              |
+ \n",
+"Vect:                              |
+ \n",
+"Comp:                              |
+ \n",
+"Fail:                              |
+ \n",
+"\n",
+"CREG =  0,   SREG =  0,    PC = 33,     EQ = 1
+ \n",
+"       00#H         00#H        21#H
+ \n",
+"\n",
+"Pipeline :   OE   OPCODE   POL   TEST   DATA     OUTPUTS
+ \n",
+"             1    0F#H     1     6      63       0011001100110011#B
+ \n",
+"                                        3F#H     3333#H
+ \n",
+"Mnemonics:   DECGOPL, IF (cond) THEN GOTO PL(data) ELSE WHILE (CREG <> 0)
+ WAIT\n",
+"Condition PASS
+ \n",
+"
+ \n",
+"\n"
+};
+
+
+                /* mark for undefined value    */
+char     *Undef1 = "***";    /* general or decimal represent.*/
+char    *Undef2 = "    ";    /* for hex representation    */
+char    UndefMrk = 'X';        /* for computed output        */
+
+char    *PipeTtl1 =         /* title line for pipeline reg    */
+    "Pipeline :   OE   OPCODE   POL   TEST   DATA     OUTPUTS";
+char    *PipeTtl2 =         /* title line for cmp instr    */
+    "Pipeline :   OE   OPCODE   CONSTANT   DATA       OUTPUTS";
+
+/*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
+
+char dRETPL [] = "RETPL";
+char dRETPLN [] = "RETPLN";
+char dRET [] = "RET";
+char dRETN [] = "RETN";
+char dLDPL [] = "LDPL";
+char dLDPLN [] = "LDPLN";
+char dLDTM [] = "LDTM";
+char dLDTMN [] = "LDTMN";
+char dLPPL [] = "LPPL";
+char dDEC [] = "DEC";
+char dLPPLN [] = "LPPLN";
+char dGOTOPLZ [] = "GOTOPLZ";
+char dDECPL [] = "DECPL";
+char dCONT [] = "CONT";
+char dDECTM [] = "DECTM";
+char dGOTOTM [] = "GOTOTM";
+char dCMP [] = "CMP";
+char dPSHPL [] = "PSHPL";
+char dPSH [] = "PSH";
+char dPSHTM [] = "PSHTM";
+char dPSHN [] = "PSHN";
+char dFORK [] = "FORK";
+char dGOTOPL [] = "GOTOPL";
+char dWAIT [] ="WAIT";
+char dDECGOPL [] = "DECGOPL";
+char dCALPL [] = "CALPL";
+char dCALPLN [] = "CALPLN";
+char dCALTM [] = "CALTM";
+char dCALTMN [] = "CALTMN";
+char dOUTPUT [] = "OUTPUT";
+char dGOTOSTK [] = "GOTOSTK";
+char dPSHCNTR [] = "PSHCNTR";
+char dPOP [] = "POP";
+char dNOP [] = "NOP";
+char dLPTM [] = "LPTM";
+char dLPSTK [] = "LPSTK";
+char dPOPCNTR [] = "POPCNTR";
+char dWAITPL [] = "WAITPL";
+char dWAITTM [] = "WAITTM";
+
+char aRETPL [] = "IF (cond) THEN RET,LOAD PL(data)";
+char aRETPLN [] = "IF (cond) THEN RET NESTED,LOAD PL(data)";
+char aRET [] = "IF (cond) THEN RET";
+char aRETN [] = "IF (cond) THEN RET,NESTED";
+char aLDPL [] = "IF (cond) THEN LOAD PL(data)";
+char aLDPLN [] = "IF (cond) THEN LOAD PL(data),NESTED";
+char aLDTM [] = "IF (cond) THEN LOAD TM(data)";
+char aLDTMN [] = "IF (cond) THEN LOAD TM(data),NESTED";
+char aLPPL [] = "WHILE (CREG <> 0) LOOP TO PL(data)";
+char aLPPL2 [] = "WHILE (COND2) LOOP TO PL(data)";
+char aDEC [] = "IF (cond) THEN DEC";
+char aLPPLN [] = "WHILE (CREG <> 0) LOOP TO PL(data) ELSE NEST";
+char aGOTOPLZ [] = "IF (CREG = 0) THEN GOTO PL(data)";
+char aDECPL [] = "WHILE (CREG <> 0) WAIT ELSE LOAD PL(data)";
+char aCONT [] = "CONTINUE";
+char aDECTM [] = "WHILE (CREG <> 0) WAIT ELSE LOAD TM(data)";
+char aGOTOTM [] = "IF (cond) THEN GOTO TM(data)";
+char aCMP [] = "CMP TM(data) TO PL(data)";
+char aPSHPL [] = "IF (cond) THEN PUSH,LOAD PL(data)";
+char aPSH [] = "IF (cond) THEN PUSH";
+char aPSHTM [] = "IF (cond) THEN PUSH,LOAD TM(data)";
+char aPSHN [] = "IF (cond) THEN PUSH,NESTED";
+char aFORK [] = "IF (cond) THEN GOTO PL(data) ELSE GOTO (SREG)";
+char aFORK2 [] = "IF (cond) THEN GOTO PL(data) ELSE GOTO (STACK)";
+char aGOTOPL [] = "IF (cond) THEN GOTO PL(data)";
+char aWAIT [] = "IF (cond) THEN GOTO PL(data) ELSE WAIT";
+char aDECGOPL [] = "IF (cond) THEN GOTO PL(data) ELSE WHILE (CREG <> 0) WAIT";
+char aCALPL [] = "IF (cond) THEN CALL PL(data)";
+char aCALPLN [] = "IF (cond) THEN CALL PL(data),NESTED";
+char aCALTM [] = "IF (cond) THEN CALL TM(data)";
+char aCALTMN [] = "IF (cond) THEN CALL TM(data),NESTED";
+char aOUTPUT [] = "IF (cond) THEN OUTPUT";
+char aGOTOSTK [] = "IF (cond) THEN GOTO (STACK)";
+char aPSHCNTR [] = "IF (cond) THEN PUSH (CREG)";
+char aPOP [] = "IF  (cond) THEN POP";
+char aNOP [] = "NOP";
+char aLPTM [] = "WHILE (COND2) LOOP TO TM(data)";
+char aLPSTK [] = "WHILE (COND2) LOOP TO (STACK)";
+char aPOPCNTR [] = "IF (cond) THEN POP TO (CREG)";
+char aWAITPL [] = "IF (cond) THEN GOTO PL(data) ELSE WAIT";
+char aWAITTM [] = "IF (cond) THEN GOTO TM(data) ELSE WAIT";
+
+
+char *DataMnem [MAX_TYP] [MAX_OP] =
+{
+    {
+    dRETPL,
+    dRETPLN,
+    dRET,
+    dRETN,
+    dLDPL,
+    dLDPLN,
+    dLDTM,
+    dLDTMN,
+    dLPPL,
+    dDEC,
+    dLPPLN,
+    dGOTOPLZ,
+    dDECPL,
+    dCONT,
+    dDECTM,
+    dGOTOTM,
+    dCMP,
+    dCMP,
+    dCMP,
+    dCMP,
+    dPSHPL,
+    dPSH,
+    dPSHTM,
+    dPSHN,
+    dFORK,
+    dGOTOPL,
+    dWAIT,
+    dDECGOPL,
+    dCALPL,
+    dCALPLN,
+    dCALTM,
+    dCALTMN
+    },
+    {
+    dRETPL,
+    dRETPLN,
+    dRET,
+    dRETN,
+    dLDPL,
+    dLDPLN,
+    dLDTM,
+    dLDTMN,
+    dLPPL,
+    dDEC,
+    dLPPLN,
+    dGOTOPLZ,
+    dDECPL,
+    dCONT,
+    dDECTM,
+    dGOTOTM,
+    dCMP,
+    dCMP,
+    dCMP,
+    dCMP,
+    dPSHPL,
+    dPSH,
+    dPSHTM,
+    dPSHN,
+    dFORK,
+    dGOTOPL,
+    dWAIT,
+    dDECGOPL,
+    dCALPL,
+    dCALPLN,
+    dCALTM,
+    dCALTMN
+    },
+    {
+    dRETPL,
+    dOUTPUT,
+    dRET,
+    dGOTOSTK,
+    dLDPL,
+    dPSHCNTR,
+    dLDTM,
+    dPOP,
+    dLPPL,
+    dNOP,
+    dLPTM,
+    dDEC,
+    dDECPL,
+    dCONT,
+    dDECTM,
+    dLPSTK,
+    dCMP,
+    dCMP,
+    dCMP,
+    dCMP,
+    dPSHPL,
+    dPSH,
+    dPSHTM,
+    dPOPCNTR,
+    dFORK,
+    dGOTOPL,
+    dWAITPL,
+    dWAITTM,
+    dCALPL,
+    dDECGOPL,
+    dCALTM,
+    dGOTOTM
+    }
+};
+
+char *AsmMnem [MAX_TYP] [MAX_OP] =
+{
+    {
+    aRETPL,
+    aRETPLN,
+    aRET,
+    aRETN,
+    aLDPL,
+    aLDPLN,
+    aLDTM,
+    aLDTMN,
+    aLPPL,
+    aDEC,
+    aLPPLN,
+    aGOTOPLZ,
+    aDECPL,
+    aCONT,
+    aDECTM,
+    aGOTOTM,
+    aCMP,
+    aCMP,
+    aCMP,
+    aCMP,
+    aPSHPL,
+    aPSH,
+    aPSHTM,
+    aPSHN,
+    aFORK,
+    aGOTOPL,
+    aWAIT,
+    aDECGOPL,
+    aCALPL,
+    aCALPLN,
+    aCALTM,
+    aCALTMN
+    },
+    {
+    aRETPL,
+    aRETPLN,
+    aRET,
+    aRETN,
+    aLDPL,
+    aLDPLN,
+    aLDTM,
+    aLDTMN,
+    aLPPL,
+    aDEC,
+    aLPPLN,
+    aGOTOPLZ,
+    aDECPL,
+    aCONT,
+    aDECTM,
+    aGOTOTM,
+    aCMP,
+    aCMP,
+    aCMP,
+    aCMP,
+    aPSHPL,
+    aPSH,
+    aPSHTM,
+    aPSHN,
+    aFORK,
+    aGOTOPL,
+    aWAIT,
+    aDECGOPL,
+    aCALPL,
+    aCALPLN,
+    aCALTM,
+    aCALTMN
+    },
+    {
+    aRETPL,
+    aOUTPUT,
+    aRET,
+    aGOTOSTK,
+    aLDPL,
+    aPSHCNTR,
+    aLDTM,
+    aPOP,
+    aLPPL2,
+    aNOP,
+    aLPTM,
+    aDEC,
+    aDECPL,
+    aCONT,
+    aDECTM,
+    aLPSTK,
+    aCMP,
+    aCMP,
+    aCMP,
+    aCMP,
+    aPSHPL,
+    aPSH,
+    aPSHTM,
+    aPOPCNTR,
+    aFORK2,
+    aGOTOPL,
+    aWAITPL,
+    aWAITTM,
+    aCALPL,
+    aDECGOPL,
+    aCALTM,
+    aGOTOTM
+    }
+};
+
+/*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
+
+/* end of message.c */
+SHAR_EOF
+cat << \SHAR_EOF > simdcl.h
+/****************************************************************\
+**                                                              **
+**    simdcl.h  -  Simulator for Am29PL14x Family     v1.02     **
+**                                                              **
+**    Copyright 1987 Advanced Micro Devices, Inc.               **
+**    Written by Gibbons and Associates, Inc.                   **
+**                                                              **
+**    This file contains the declarations used in all program   **
+**    files.                                                    **
+**                                                              **
+\****************************************************************/
+
+#ifndef SIMDCL
+#define SIMDCL
+
+/*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
+
+typedef char         BYTE;        /* general 8 bit item   */
+typedef short int     SMALL;        /* general 16 bit item  */
+typedef short int     BOOLEAN;    /* general boolean item */
+
+typedef    short int     ERR_CODE;    /* error code           */
+
+typedef long int      INST_FLD;    /* microinstruction     */
+typedef short int     OUT_FLD;    /* user-defined outputs */
+typedef short int     SML_FLD;    /* microinstr field     */
+
+/*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
+
+#define    MAX_TYP        3    /* # of devices supported       */
+
+#define PL131        0    /* Am29PL131                */
+#define PL141        1    /* Am29PL141                */
+#define PL142              2       /* Am29PL142                */
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+#define FS_BYTES    545    /* maximum fuses in bytes       */
+#define MAX_AD        128    /* max microprogram mem addr    */
+#define MAX_PIN        28    /* max number of pins            */
+#define    MAX_OP        32    /* max opcode            */
+
+#define    INPUT        1    /* input pin            */
+#define    OUTPUT        2    /* output pin            */
+#define CLOCK        3    /* clock pin            */
+
+#define UNCOND        0    /* unconditional        */
+#define    OUT_MASK    0x7F00    /* p[14:8] mask for 29142    */
+
+#define    MAX_CMD        18    /* number of interactive cmd    */
+
+#define NAME_SIZ    5    /* only the first 5 chars of a  */
+                /* pin name are significant    */
+#define UNDEFINE    -1    /* undefined register value    */
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+#define    CMP_LOW        0x10    /* lower bound of CMO opcode    */
+#define CMP_HIGH    0x13    /* upper bound of CMP opcode    */
+#define    DECTM_OP    0x0E    /* dectm opcode            */
+#define LPTM_OP        0x0A    /* lptm opcode            */
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+                /* used in JEDEC standard       */
+
+#define    STX        2    /* start of text                */
+#define ETX        3    /* end of text                  */
+#define LF        0xA    /* line feed                */
+#define CR        0xD     /* carriage return              */
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+                /* simulation control mode    */
+
+#define    SS        1    /* single step            */
+#define    CS        2    /* cancel single step        */
+#define CMD        3    /* command mode            */
+#define    EXIT        4    /* exit                */
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+                /* miscellaneous            */
+
+#define    FALSE        0    /* false condition        */
+#define TRUE        1    /* true condition        */
+
+#define    MAX_LINE    23    /* number of disp lines        */
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+                /* keyword index        */
+
+#define    ERR        0    /* command option -b ERR    */
+#define HEADER        1    /* table heading        */
+#define    PIN        2    /* pin declaration - vector file*/
+#define    VECT        3    /* vector body            */
+#define IN        4    /* input signals        */
+#define    OUT        5    /* output signals        */
+#define    BGN        6    /* begin of test vectors    */
+#define    END        7    /* end of test vectors        */
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+                /* message index                */
+
+#define    MSG_VERS    0    /* version message        */
+#define MSG_INST    1    /* first instruction        */
+#define    MSG_PRMP    2    /* prompt            */
+#define    MSG_BRK        3    /* at break point        */
+#define    MSG_COMP    4    /* simulation completed        */
+#define    MSG_PL        5    /* address of current pipeline    */
+#define    MSG_PLJR    6    /* user loaded pipeline        */
+#define MSG_PLX        7    /* initial pipeline not defined    */
+
+#define    MSG_PC        10    /* load PC             */
+#define    MSG_CREG    11    /* load CREG            */
+#define    MSG_SREG    12    /* load SREG            */
+#define    MSG_BP        13    /* set break point        */
+#define    MSG_OE        14    /* OE field in instruction    */
+#define    MSG_OP        15    /* opcode field            */
+#define    MSG_POL        16    /* pol bit            */
+#define    MSG_TEST    17    /* test field            */
+#define    MSG_DATA    18    /* data field            */
+#define    MSG_OUT        19    /* outputs field        */
+#define    MSG_CONS    20    /* constant field        */
+#define MSG_TOS        21    /* top of stack field        */
+#define MSG_BOS        22    /* bottom of stack field    */
+#define MSG_UNDF    23    /* undefined            */
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+                /* error message index        */
+
+#define    NO_ERR        0    /* no error condition            */
+
+#define    ERR_OPT        1    /* invalid option        */
+#define    ERR_PARM    2    /* invalid parameter        */
+#define    ERR_OPEN    3    /* error at opening file    */
+#define    ERR_SIM        4    /* error in selecting device    */
+#define    ERR_LAST    5    /* no parameters after jedec    */
+#define    ERR_VMIS    6    /* missing test input file    */
+#define    ERR_JMIS    7    /* missing jedec file        */
+#define ERR_NUM        8    /* invalid number        */
+
+#define    ERR_JED        10    /* incorrect jedec file format    */
+#define    ERR_JMOR    11    /* too many links are defined    */
+#define    ERR_JLES    12    /* not all links are defined    */
+#define    ERR_CHK        13    /* checksum error        */
+#define ERR_SSR        14    /* no SSR diagnostic mode     */
+#define ERR_REG        15    /* invalid preloaded reg    */
+
+#define    ERR_KEY        20    /* keyword is missing        */
+#define    ERR_PINN    21    /* invalid pin number        */
+#define    ERR_PIN        22    /* invalid pin declaration    */
+#define    ERR_SYMB    23    /* invalid symbol        */
+#define    ERR_IO        24    /* invalid input/output        */
+#define    ERR_VNUM    25    /* invalid vector number    */
+#define    ERR_VMOR    26    /* too many fields defined    */
+#define    ERR_VLES    27    /* missing fields        */
+
+#define    ERR_CMD        30    /* invalid command        */
+#define    ERR_PC        31    /* invalid PC value        */
+#define    ERR_INP        32    /* invalid input        */
+
+/*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
+
+struct DevSize            /* device parameters            */
+{
+SMALL        MaxAddr;    /* maximum memory address       */
+SMALL        MaxPin;        /* number of pins            */
+SMALL        MaxFuse;    /* number of fuses        */
+SMALL        MaxTest;    /* input test value        */
+SMALL        BtsPerAd;    /* bits per address             */
+SMALL       BtsPerOt;       /* bits per controled output    */
+SMALL        FuseByte;    /* size of fuse array           */
+};
+
+struct MemWord            /* temporary storage format     */
+{
+INST_FLD    Upper;        /* microinstruction part        */
+OUT_FLD        Lower;        /* control outputs part         */
+};
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+struct Instr            /* microinstructin information  */
+{
+BOOLEAN        OE;        /* output enable            */
+SML_FLD        Opcode;        /* opcode field                 */
+BOOLEAN        Pol;        /* polarity selection           */
+SML_FLD        Test;        /* test condition selection     */
+SML_FLD        Data;        /* branch addr, counter, etc.   */
+SML_FLD        Outputs;    /* controlled output            */
+SML_FLD        Const;        /* constant for comparison      */
+};
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+struct PinInfo            /* organize pin declarations    */
+{
+SMALL         IOFlag;        /* input, output, or clock    */
+BOOLEAN        ErrFlag;    /* ture if simulating error    */
+SMALL        DispCol;    /* display column            */
+char        Name [6];    /* user-defined symbol name     */
+char        Value;        /* user specified value         */
+};
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+struct BitLoc            /* bit mask and shift count    */
+{                /*    to convert to instruction    */
+SML_FLD        Mask;        /* bit mask            */
+SMALL        Shift;        /* shift count            */
+};
+
+struct FldForm            /* microinstruction format    */
+{
+struct BitLoc    TrOE;        /* info used to convert OE    */
+struct BitLoc    TrOpcode;    /* info used to convert opcode    */
+struct BitLoc    TrPol;        /* info used to convert pol    */
+struct BitLoc    TrTest;        /* info used to convert test    */
+struct BitLoc    TrData;        /* info used to convert data    */
+struct BitLoc    TrConst;    /* info used to convert constant*/
+};
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+struct CmdInfo            /* interactive commands         */
+{
+char         *CmdText;    /* command string               */
+void        (*Handler)();    /* command handler            */
+};
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+struct OpInfo            /* regarding microinstructions    */
+{
+void        (*Exec)();    /* execution routine            */
+BOOLEAN        CondSel;    /* condition selection or not    */
+BOOLEAN        TM;        /* use T*M or not        */
+};
+
+#ifdef DEBUG
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+struct DbgAnaly            /* debug analysis        */
+{
+int        CumCnt;        /* op executed            */
+int        TrueCond;    /* true condition        */
+int        FalsCond;    /* false condition        */
+int        TestCond [16];    /* test condition selection    */
+};
+#endif
+
+/*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
+
+#endif
+
+/* end of simdcl.h */
+SHAR_EOF
+cat << \SHAR_EOF > simfunc.h
+/****************************************************************\
+**                                                              **
+**    simfunc.h  -  Simulator for Am29PL14x Family     v1.01    **
+**                                                              **
+**    Copyright 1987 Advanced Micro Devices, Inc.               **
+**    Written by Gibbons and Associates, Inc.                   **
+**                                                              **
+**    This file contains the extern declarations of all the     **
+**    functions.                                                **
+**                                                              **
+\****************************************************************/
+
+#ifndef VAX
+
+/*global*/  short ScanOpt(int ,char * *);
+/*global*/  char *GetParm(void );
+/*global*/  short SrchCmd(char *);
+/*global*/  void LoadReg(short *,short );
+/*global*/  void LoadPC(void );
+/*global*/  void LoadCREG(void );
+/*global*/  void LoadSREG(void );
+/*global*/  void LoadTOS(void );
+/*global*/  void LoadBOS(void );
+/*global*/  void SetEQ(void );
+/*global*/  void ResetEQ(void );
+/*global*/  void SStep(void );
+/*global*/  void CancelSS(void );
+/*global*/  void ProcBrk(short );
+/*global*/  void SetBreak(void );
+/*global*/  void CancelBrk(void );
+/*global*/  void CancelAll(void );
+/*global*/  void DispBrk(void );
+/*global*/  void RunProg(void );
+/*global*/  void ExitCmd(void );
+/*global*/  void DispHelp(void);
+/*global*/  short GetField(short ,short ,short ,char *);
+/*global*/  void ReplInst(void );
+/*global*/  void ErrBreak(void );
+/*global*/  void ScanCmd(void );
+
+/*global*/  char NameChar(short ,short ,short );
+/*global*/  void DispInit(void );
+/*global*/  void FillBin(short ,short ,char *);
+/*global*/  void FillVect(char *);
+/*global*/  void FillComp(char *);
+/*global*/  void FillErr(char *);
+/*global*/  void FillVal(short ,char *,char *);
+/*global*/  void FillTM(void );
+/*global*/  void FillReg(void );
+/*global*/  void DispGen(void );
+
+/*global*/  short TM(void );
+/*global*/  void DecCREG(void );
+/*global*/  void IncPC(void );
+/*global*/  void RETPL(void );
+/*global*/  void RETPLN(void );
+/*global*/  void RET(void );
+/*global*/  void RETN(void );
+/*global*/  void LDPL(void );
+/*global*/  void LDPLN(void );
+/*global*/  void LDTM(void );
+/*global*/  void LDTMN(void );
+/*global*/  void LPPL(void );
+/*global*/  void DEC(void );
+/*global*/  void LPPLN(void );
+/*global*/  void GOTOPLZ(void );
+/*global*/  void DECPL(void );
+/*global*/  void CONT(void );
+/*global*/  void DECTM(void );
+/*global*/  void GOTOTM(void );
+/*global*/  void CMP(void );
+/*global*/  void PSHPL(void );
+/*global*/  void PSH(void );
+/*global*/  void PSHTM(void );
+/*global*/  void PSHN(void );
+/*global*/  void FORK(void );
+/*global*/  void GOTOPL(void );
+/*global*/  void WAIT(void );
+/*global*/  void DECGOPL(void );
+/*global*/  void CALPL(void );
+/*global*/  void CALPLN(void );
+/*global*/  void CALTM(void );
+/*global*/  void CALTMN(void );
+/*global*/  void RETPL_2(void );
+/*global*/  void OUTPUT_2(void );
+/*global*/  void RET_2(void );
+/*global*/  void GOTOSTK_2(void );
+/*global*/  void PSHCTR_2(void );
+/*global*/  void POP_2(void );
+/*global*/  void NOP_2(void );
+/*global*/  void LPTM_2(void );
+/*global*/  void CONT_2(void );
+/*global*/  void LPPLN_2(void );
+/*global*/  void PSHPL_2(void );
+/*global*/  void PSH_2(void );
+/*global*/  void PSHTM_2(void );
+/*global*/  void POPCNTR_2(void );
+/*global*/  void FORK_2(void );
+/*global*/  void WAITTM_2(void );
+/*global*/  void CALPL_2(void );
+/*global*/  void CALTM_2(void );
+
+/*global*/  int ReadCh(void );
+/*global*/  void SkipAst(void );
+/*global*/  short ReadAddr(short *);
+/*global*/  void ReadStr(char * ,short );
+/*global*/  short ReadDev(void );
+/*global*/  short ReadDft(void );
+/*global*/  void ScatData(int ,short );
+/*global*/  short ReadLink(void );
+/*global*/  short ChAllDef(void );
+/*global*/  short ReadChk(void );
+/*global*/  short ETXCheck(void );
+/*global*/  short ReadFuse(void );
+/*global*/  void ConvInst(long ,short ,struct Instr *);
+/*global*/  short FuseInit(void );
+
+/*global*/  short EvalTest(struct Instr *);
+/*global*/  void OutpChk(void );
+/*global*/  void SimStep(void );
+/*global*/  void SimCtrl(void );
+/*global*/  void Init(void );
+/*global*/  short FileInit(void );
+/*global*/  void main(int ,char * *);
+
+/*global*/  char ToUpper(char );
+/*global*/  void SkpBlnks(char * *);
+/*global*/  short ScNum(char *,short *);
+
+/*global*/  char *GetStr(char *);
+/*global*/  short ReadPin(void );
+/*global*/  short ReadSig(void );
+/*global*/  short VectInit(void );
+/*global*/  void InpProc(short *,short *,short *,short *,short *);
+/*global*/  short ReadVect(void );
+
+/*-------------------------------------------------------------*/
+#else
+
+/*global*/  short ScanOpt();
+/*global*/  char *GetParm();
+/*global*/  short SrchCmd();
+/*global*/  void LoadReg();
+/*global*/  void LoadPC();
+/*global*/  void LoadCREG();
+/*global*/  void LoadSREG();
+/*global*/  void LoadTOS();
+/*global*/  void LoadBOS();
+/*global*/  void SetEQ();
+/*global*/  void ResetEQ();
+/*global*/  void SStep();
+/*global*/  void CancelSS();
+/*global*/  void ProcBrk();
+/*global*/  void SetBreak();
+/*global*/  void CancelBrk();
+/*global*/  void CancelAll();
+/*global*/  void DispBrk();
+/*global*/  void RunProg();
+/*global*/  void ExitCmd();
+/*global*/  void DispHelp();
+/*global*/  short GetField();
+/*global*/  void ReplInst();
+/*global*/  void ErrBreak();
+/*global*/  void ScanCmd();
+
+/*global*/  char NameChar();
+/*global*/  void DispInit();
+/*global*/  void FillBin();
+/*global*/  void FillVect();
+/*global*/  void FillComp();
+/*global*/  void FillErr();
+/*global*/  void FillVal();
+/*global*/  void FillTM();
+/*global*/  void FillReg();
+/*global*/  void DispGen();
+
+/*global*/  short TM();
+/*global*/  void DecCREG();
+/*global*/  void IncPC();
+/*global*/  void RETPL();
+/*global*/  void RETPLN();
+/*global*/  void RET();
+/*global*/  void RETN();
+/*global*/  void LDPL();
+/*global*/  void LDPLN();
+/*global*/  void LDTM();
+/*global*/  void LDTMN();
+/*global*/  void LPPL();
+/*global*/  void DEC();
+/*global*/  void LPPLN();
+/*global*/  void GOTOPLZ();
+/*global*/  void DECPL();
+/*global*/  void CONT();
+/*global*/  void DECTM();
+/*global*/  void GOTOTM();
+/*global*/  void CMP();
+/*global*/  void PSHPL();
+/*global*/  void PSH();
+/*global*/  void PSHTM();
+/*global*/  void PSHN();
+/*global*/  void FORK();
+/*global*/  void GOTOPL();
+/*global*/  void WAIT();
+/*global*/  void DECGOPL();
+/*global*/  void CALPL();
+/*global*/  void CALPLN();
+/*global*/  void CALTM();
+/*global*/  void CALTMN();
+/*global*/  void RETPL_2();
+/*global*/  void OUTPUT_2();
+/*global*/  void RET_2();
+/*global*/  void GOTOSTK_2();
+/*global*/  void PSHCTR_2();
+/*global*/  void POP_2();
+/*global*/  void NOP_2();
+/*global*/  void LPTM_2();
+/*global*/  void CONT_2();
+/*global*/  void LPPLN_2();
+/*global*/  void PSHPL_2();
+/*global*/  void PSH_2();
+/*global*/  void PSHTM_2();
+/*global*/  void POPCNTR_2();
+/*global*/  void FORK_2();
+/*global*/  void WAITTM_2();
+/*global*/  void CALPL_2();
+/*global*/  void CALTM_2();
+
+/*global*/  int ReadCh();
+/*global*/  void SkipAst();
+/*global*/  short ReadAddr();
+/*global*/  void ReadStr();
+/*global*/  short ReadDev();
+/*global*/  short ReadDft();
+/*global*/  void ScatData();
+/*global*/  short ReadLink();
+/*global*/  short ChAllDef();
+/*global*/  short ReadChk();
+/*global*/  short ETXCheck();
+/*global*/  short ReadFuse();
+/*global*/  void ConvInst();
+/*global*/  short FuseInit();
+
+/*global*/  short EvalTest();
+/*global*/  void OutpChk();
+/*global*/  void SimStep();
+/*global*/  void SimCtrl();
+/*global*/  void Init();
+/*global*/  short FileInit();
+/*global*/  void main();
+
+/*global*/  char ToUpper();
+/*global*/  void SkpBlnks();
+/*global*/  short ScNum();
+
+/*global*/  char *GetStr();
+/*global*/  short ReadPin();
+/*global*/  short ReadSig();
+/*global*/  short VectInit();
+/*global*/  void InpProc();
+/*global*/  short ReadVect();
+
+#endif
+SHAR_EOF
+cat << \SHAR_EOF > table.c
+/***************************************************************\
+**                                                             **
+**    table.c  -  Simulator for Am29PL14x Family     v1.00     **
+**                                                             **
+**    Copyright 1987 Advanced Micro Devices, Inc.              **
+**    Written by Gibbons and Associates, Inc.                  **
+**                                                             **
+**    This file contains the tables which describe the         **
+**    configuration of each device.                            **
+**                                                             **
+\***************************************************************/
+
+#include "simdcl.h"
+
+/*-------------------------------------------------------------*/
+
+struct DevSize    DevParm [MAX_TYP] =
+{
+    {
+        64,
+        24,
+        1793,
+        8,
+        28,
+        12,
+        225
+    },
+    {
+        64,
+        28,
+        2049,
+        8,
+        32,
+        16,
+        257
+    },
+    {
+        128,
+        28,
+        4354,
+        16,
+        34,
+        16,
+        545
+    }
+};
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+struct FldForm TrInstr [MAX_TYP] =
+
+/*
+** The table below is intended to simplify the algorithm which
+** translates the fuse links to the instruction.  Each field
+** within the instruction is defined with a bit mask and a
+** shift factor.  Thus, a field's value can be calculated just
+** using mask and shift operations.
+*/
+
+{
+    {
+        {0x0001, 15},
+        {0x001F, 10},
+        {0x0001,  9},
+        {0x0007,  6},
+        {0x003F,  0},
+        {0x003F,  6}
+    },
+    {
+        {0x0001, 15},
+        {0x001F, 10},
+        {0x0001,  9},
+        {0x0007,  6},
+        {0x003F,  0},
+        {0x003F,  6}
+    },
+    {
+        {0x0001, 17},
+        {0x001F, 12},
+        {0x0001, 11},
+        {0x000F,  7},
+        {0x007F,  0},
+        {0x007F,  7}
+    }
+};
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+OUT_FLD     OEMask [MAX_TYP] = /* bit mask for tri-state   */
+{
+    (OUT_FLD)0x00FF,
+    (OUT_FLD)0xFF00,
+    (OUT_FLD)0xFF00
+};
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+struct PinInfo    PinList [MAX_TYP] [MAX_PIN + 1] =
+{
+    {
+        {0,     0,     0,     0,     {0}},
+        {OUTPUT,FALSE,    0,     0,    {0}},    /* 1     */
+        {OUTPUT,FALSE,    0,    0,    {0}},    /* 2     */
+        {OUTPUT,FALSE,    0,     0,    {0}},    /* 3     */
+        {OUTPUT,FALSE,    0,    0,    {0}},    /* 4     */
+        {OUTPUT,FALSE,    0,     0,    {0}},    /* 5     */
+        {0,    0,    0,    0,    {0}},    /* 6      */
+        {OUTPUT,FALSE,    0,     0,    {0}},    /* 7     */
+        {OUTPUT,FALSE,    0,    0,    {0}},    /* 8     */
+        {OUTPUT,FALSE,    0,    0,    {0}},    /* 9     */
+        {OUTPUT,FALSE,    0,     0,    {0}},    /* 10     */
+        {OUTPUT,FALSE,    0,    0,    {0}},    /* 11     */
+        {OUTPUT,FALSE,    0,     0,    {0}},    /* 12      */
+        {OUTPUT,FALSE,    0,    0,    {0}},    /* 13      */
+        {INPUT, FALSE,    0,    0,    {0}},    /* 14     */
+        {INPUT,    FALSE,    0,    0,    {0}},    /* 15     */
+        {INPUT,    FALSE,    0,    0,    {0}},    /* 16     */
+        {0,    0,    0,    0,    {0}},    /* 17     */
+        {INPUT,    FALSE,    0,    0,    {0}},    /* 18     */
+        {0,    0,    0,    0,    {0}},    /* 19     */
+        {INPUT,    FALSE,    0,    0,    {0}},    /* 20     */
+        {INPUT,    FALSE,    0,    0,    {0}},    /* 21     */
+        {INPUT,    FALSE,    0,    0,    {0}},    /* 22     */
+        {INPUT,    FALSE,    0,    0,    {0}},    /* 23     */
+        {CLOCK,    FALSE,    0,    0,    {0}}    /* 24     */
+    },
+    {
+        {0,     0,     0,     0,     {0}},
+        {OUTPUT,FALSE,    0,     0,    {0}},    /* 1     */
+        {OUTPUT,FALSE,    0,    0,    {0}},    /* 2     */
+        {OUTPUT,FALSE,    0,     0,    {0}},    /* 3     */
+        {OUTPUT,FALSE,    0,    0,    {0}},    /* 4     */
+        {OUTPUT,FALSE,    0,     0,    {0}},    /* 5     */
+        {OUTPUT,FALSE,    0,    0,    {0}},    /* 6     */
+        {OUTPUT,FALSE,    0,     0,    {0}},    /* 7     */
+        {OUTPUT,FALSE,    0,    0,    {0}},    /* 8     */
+        {OUTPUT,FALSE,    0,    0,    {0}},    /* 9     */
+        {OUTPUT,FALSE,    0,     0,    {0}},    /* 10     */
+        {OUTPUT,FALSE,    0,    0,    {0}},    /* 11     */
+        {OUTPUT,FALSE,    0,     0,    {0}},    /* 12     */
+        {OUTPUT,FALSE,    0,    0,    {0}},    /* 13     */
+        {0,    0,    0,    0,    {0}},    /* 14     */
+        {OUTPUT,FALSE,    0,     0,    {0}},    /* 15     */
+        {OUTPUT,FALSE,    0,    0,    {0}},    /* 16     */
+        {OUTPUT,FALSE,    0,     0,    {0}},    /* 17     */
+        {OUTPUT,FALSE,    0,    0,    {0}},    /* 18     */
+        {INPUT,    FALSE,    0,    0,    {0}},    /* 19     */
+        {INPUT,    FALSE,    0,    0,    {0}},    /* 20     */
+        {INPUT,    FALSE,    0,    0,    {0}},    /* 21     */
+        {INPUT,    FALSE,    0,    0,    {0}},    /* 22     */
+        {INPUT,    FALSE,    0,    0,    {0}},    /* 23     */
+        {INPUT,    FALSE,    0,    0,    {0}},    /* 24     */
+        {INPUT,    FALSE,    0,    0,    {0}},    /* 25     */
+        {INPUT,    FALSE,    0,    0,    {0}},    /* 26     */
+        {CLOCK,    FALSE,    0,    0,    {0}},    /* 27     */
+        {0,    0,    0,    0,    {0}}    /* 28     */
+    },
+    {
+        {0,    0,     0,     0,     {0}},
+        {INPUT, FALSE,    0,     0,    {0}},    /* 1     */
+        {OUTPUT,FALSE,    0,    0,    {0}},    /* 2     */
+        {OUTPUT,FALSE,    0,     0,    {0}},    /* 3     */
+        {OUTPUT,FALSE,    0,    0,    {0}},    /* 4     */
+        {OUTPUT,FALSE,    0,     0,    {0}},    /* 5     */
+        {OUTPUT,FALSE,    0,    0,    {0}},    /* 6     */
+        {OUTPUT,FALSE,    0,     0,    {0}},    /* 7     */
+        {OUTPUT,FALSE,    0,    0,    {0}},    /* 8     */
+        {OUTPUT,FALSE,    0,    0,    {0}},    /* 9     */
+        {OUTPUT,FALSE,    0,     0,    {0}},    /* 10     */
+        {OUTPUT,FALSE,    0,    0,    {0}},    /* 11     */
+        {OUTPUT,FALSE,    0,     0,    {0}},    /* 12     */
+        {OUTPUT,FALSE,    0,    0,    {0}},    /* 13     */
+        {0,    0,    0,    0,    {0}},    /* 14     */
+        {OUTPUT,FALSE,    0,     0,    {0}},    /* 15     */
+        {OUTPUT,FALSE,    0,    0,    {0}},    /* 16     */
+        {OUTPUT,FALSE,    0,     0,    {0}},    /* 17     */
+        {OUTPUT,FALSE,    0,    0,    {0}},    /* 18     */
+        {INPUT,    FALSE,    0,    0,    {0}},    /* 19     */
+        {INPUT,    FALSE,    0,    0,    {0}},    /* 20     */
+        {INPUT,    FALSE,    0,    0,    {0}},    /* 21     */
+        {INPUT,    FALSE,    0,    0,    {0}},    /* 22     */
+        {INPUT,    FALSE,    0,    0,    {0}},    /* 23     */
+        {INPUT,    FALSE,    0,    0,    {0}},    /* 24     */
+        {INPUT,    FALSE,    0,    0,    {0}},    /* 25     */
+        {INPUT,    FALSE,    0,    0,    {0}},    /* 26     */
+        {CLOCK,    FALSE,    0,    0,    {0}},    /* 27     */
+        {0,    0,    0,    0,    {0}}    /* 28     */
+    }
+};
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+SMALL        TestEQ [] =    /* value to select EQ        */
+{
+    7,
+    7,
+    8
+};
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+BOOLEAN        InPipe [] =    /* registered input or not    */
+{
+    TRUE,
+    FALSE,
+    TRUE
+};
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+SMALL        ClockPin [] =    /* pin number for CLK        */
+{
+    24,
+    27,
+    27
+};
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+SMALL        ResetPin [MAX_TYP][2] =    /* pin number for ~RESET*/
+{
+    {    14,    0},
+    {    19,    0},
+    {    19,    0}
+};
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+SMALL        CCPin [MAX_TYP][2] =    /* pin number for CC    */
+{
+    {    23,    0},
+    {    26,    0},
+    {    26,    0}
+};
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+SMALL        TstPin [MAX_TYP][8] =    /* pin numbers for T    */
+{
+    {22, 21, 20, 18, 16, 15, 0},
+    {25, 24, 23, 22, 21, 20, 0},
+    {25, 24, 23, 22, 21, 20, 1, 0}
+};
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+SMALL        ZeroPin [MAX_TYP] =    /* pin number for ~ZERO    */
+{
+    0,
+    1,
+    0
+};
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+SMALL        OutPin [MAX_TYP][17] =     /* pin numbers for P    */
+{
+    {1, 2, 3, 4, 5, 7, 8, 9, 10, 11, 12, 13, 0},
+    {2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16, 17, 18, 0},
+    {2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16, 17, 18, 0}
+};
+
+/*--------------------------------------------------------------*/
+
+/* end of table.c */
+SHAR_EOF
+cat << \SHAR_EOF > util.c
+/***************************************************************\
+**                                                             **
+**    util.c  -  Simulator for Am29PL14x Family     v1.00      **
+**                                                             **
+**    Copyright 1987 Advanced Micro Devices, Inc.              **
+**    Written by Gibbons and Associates, Inc.                  **
+**                                                             **
+**    This file contains some utility routines which are       **
+**    used by all programs.                                    **
+**                                                             **
+**    Functions:                                               **
+**       ToUpper   - convert to upper case                     **
+**     ScNum     - scan a number in any valid base           **
+**                                                             **
+\***************************************************************/
+
+#include "simdcl.h"
+
+/*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
+/*
+** External data declarations
+*/
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+
+/*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
+/*
+** Internal data definitions
+*/
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+
+/*--------------------------------------------------------------*/
+/*
+** Internal function definitions
+*/
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+char
+ToUpper (Ch)
+
+char        Ch;        /* char to be converted        */
+
+/*
+** Converts given character to upper case.
+*/
+
+{
+return ( (Ch >= 'a' && Ch <= 'z') ? Ch - ('a' -'A') : Ch);
+}
+
+/*-------------------------------------------------------------*/
+
+void
+SkpBlnks (ScnPt)
+
+char        **ScnPt;    /* current scan pointer           */
+
+/*
+** This routine skips white space in the source string and thus
+** advances the scan pointer.
+*/
+
+{
+register char    *ScnTemp;    /* character being examined    */
+
+for (ScnTemp = *ScnPt; *ScnTemp == ' ' || *ScnTemp == '\t'; ScnTemp++)
+    ;
+*ScnPt = ScnTemp;
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+ERR_CODE
+ScNum (NumStr, NumPt)
+
+/*
+** This routine is used to scan a number in any valid base
+** or in the default base.  It is the responsibility of the
+** caller to perform any required range checking.
+*/
+
+char        *NumStr;    /* pointer to the string       */
+SMALL        *NumPt;        /* pointer to the number       */
+
+{
+ERR_CODE    Error = NO_ERR;    /* temp for error           */
+register char    ScnChar;    /* temp for scan character     */
+char        *ScnPt;        /* current scan position       */
+char        *DigPt;        /* ptr to first digit          */
+char        *EndDgPt;    /* after the last digit        */
+unsigned int    Base;        /* base of the number           */
+unsigned int    Digit;        /* value for each digit           */
+
+ScnPt = NumStr;
+SkpBlnks (&ScnPt);
+for (DigPt = ScnPt; ;ScnPt++)
+    {
+    ScnChar = ToUpper (*ScnPt);
+    if ((ScnChar >= '0') && (ScnChar <= '9'))
+        ;
+    else
+        if ((ScnChar >= 'A') && (ScnChar <= 'F'))
+            ;
+        else
+            {
+            break;
+            }
+    }
+if (ScnPt == DigPt)
+    {
+    Error = ERR_NUM;
+    }
+else
+    {
+    EndDgPt = ScnPt;
+    if (*ScnPt == '#')
+        {
+        ScnPt++;
+        switch (ToUpper (*ScnPt))
+            {
+            case 'B':
+                {
+                Base = 2;
+                break;
+                }
+            case 'O':
+                {
+                Base = 8;
+                break;
+                }
+            case 'D':
+                {
+                Base = 10;
+                break;
+                }
+            case 'H':
+                {
+                Base = 16;
+                break;
+                }
+            default:
+                {
+                Error = ERR_NUM;
+                break;
+                }
+            }
+        }
+    else
+        {
+        Base = 10;
+        }
+    }
+
+for ( ScnPt = DigPt, *NumPt = 0;
+    ((Error == NO_ERR) && (ScnPt < EndDgPt));
+    ScnPt++)
+    {
+    ScnChar = ToUpper (*ScnPt);
+    if ((ScnChar >= '0') && (ScnChar <= '9'))
+        {
+        Digit = ScnChar - '0';
+        }
+    else
+        {
+        Digit = ScnChar - 'A' + 10;
+        }
+    if (Digit >= Base)
+        {
+        Error = ERR_NUM;
+        }
+    else
+        {
+        *NumPt = ((*NumPt) * Base) + Digit;
+        }
+    }
+
+return (Error);
+}
+
+/*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
+
+/* end of util.c */
+SHAR_EOF
+cat << \SHAR_EOF > vector.c
+/***************************************************************\
+**                                                             **
+**    vector.c  -  Simulator for Am29PL14x Family     v1.00    **
+**                                                             **
+**    Copyright 1987 Advanced Micro Devices, Inc.              **
+**    Written by Gibbons and Associates, Inc.                  **
+**                                                             **
+**    This file contains the vector file processing routines.  **
+**                                                             **
+**    Functions:                                               **
+**       ReadPin   - read the pin declarations                 **
+**       ReadSig   - read the input/output signals             **
+**       VectInit  - read the test vector file headers         **
+**       ReadVect  - read one test vector and update globals   **
+**                                                             **
+\***************************************************************/
+
+#include <stdio.h>
+#include <string.h>
+#include "simdcl.h"
+#include "simfunc.h"
+
+/*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
+/*
+** External data declarations
+*/
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+extern            /**** main.c                       */
+FILE        *VectFil;    /* vector file pointer               */
+extern
+SMALL        DevNum;        /* device to be simulated          */
+extern
+SMALL        DftX;        /* default value for don't care */
+extern
+OUT_FLD        PMask;        /* don't care or not defined    */
+extern
+OUT_FLD     PVect;        /* test output high             */
+extern
+OUT_FLD     PHiZ;        /* tst output for high impedance*/
+extern
+SML_FLD     ZeroMask;    /* don't care or not defined    */
+extern
+SML_FLD     ZeroVect;    /* value for zero test          */
+extern
+SML_FLD        RstIn;        /* synchronous reset input    */
+extern
+SML_FLD        RstInX;        /* reset don't care        */
+extern
+SML_FLD        RstInPipe;    /* reset input used by instr    */
+extern
+SML_FLD        RstInXPipe;    /* reset don't care used by inst*/
+extern
+SML_FLD        ClockIn;    /* clock input                    */
+extern
+SML_FLD        CCIn;        /* cond code input from vector  */
+extern
+SML_FLD        CCInX;        /* cond code don't care mask    */
+extern
+SML_FLD     CCInPipe;    /* cond code input used by instr*/
+extern
+SML_FLD     CCInXPipe;    /* don't care used by instr    */
+extern
+SML_FLD     TIn;        /* test inputs from vector      */
+extern
+SML_FLD        TInX;        /* don't care test inputs       */
+extern
+SML_FLD        TInPipe;    /* test inputs used by instr    */
+extern
+SML_FLD        TInXPipe;    /* don't care used by instr     */
+
+extern            /**** message.c                       */
+char        *KeyWord [];    /* keyword string               */
+extern
+char        *ErrTbl [];    /* error messages               */
+extern
+char        *DevCode [];    /* device code                   */
+
+extern            /**** table.c                       */
+struct DevSize     DevParm [];    /* device parameters               */
+extern
+BOOLEAN        InPipe [];    /* if input can be registered      */
+extern
+struct PinInfo    PinList [MAX_TYP] [MAX_PIN + 1];
+extern
+SMALL        TstPin [MAX_TYP][8];    /* test input               */
+extern
+SMALL        CCPin [MAX_TYP][2];    /* CC input               */
+extern
+SMALL        ResetPin [MAX_TYP][2];    /* reset pin               */
+extern
+SMALL        OutPin [MAX_TYP][17];    /* output pin              */
+extern
+SMALL        ZeroPin [MAX_TYP];    /* zero output pin         */
+extern
+SMALL        ClockPin [MAX_TYP];    /* clock input pin         */
+
+
+/*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
+/*
+** Internal data definitions
+*/
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+SMALL        SigCnt;
+SMALL        SigList [MAX_PIN];
+SMALL        VectNum;
+
+char        ChSave = '\0';    /* used in GetStr              */
+
+/*-------------------------------------------------------------*/
+/*
+** Internal function definitions
+*/
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+char
+*GetStr (Str)
+
+char        Str[];
+
+/*
+** Returns one character string from the test vector file.
+*/
+
+{
+BOOLEAN        Done, Comment;
+register int    c, i;
+
+i = 0;
+if (ChSave != '\0')
+    {
+    Str[i++] = ChSave;
+    ChSave = '\0';
+    }
+else
+    {
+    for (Done = FALSE, Comment = FALSE; ! Done; )
+        {
+        c = getc (VectFil);
+        if (c == '"')
+            {
+            Comment = (Comment) ? FALSE : TRUE;
+            continue;
+            }
+        if (Comment)
+            continue;
+        switch (c)
+            {
+            case '\n':
+            case ' ':
+            case '\t':
+                if (i)
+                    Done = TRUE;
+                break;
+            case EOF:
+                Done = TRUE;
+                break;
+            case '=':
+            case ';':
+                if (i)
+                    {
+                    ChSave = (char)c;
+                    Done = TRUE;
+                    }
+                else
+                    Str[i++] = (char)c;
+                break;
+            default:
+                Str[i++] = (char)c;
+                break;
+            }
+        }
+    }
+
+Str[i] = '\0';
+return ((c == EOF && i == 0) ? NULL : Str);
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+ERR_CODE
+ReadPin ()
+
+/*
+** Reads the pin declarations and stores them in PinList.
+*/
+
+{
+ERR_CODE        Error = NO_ERR;
+register BOOLEAN    Found, Done;
+SMALL            PinNum;
+register char        *p, *s;
+char            Symb1[81], Symb2[81];
+
+for (p = Symb1, Found = FALSE; ! Found && p != NULL; )
+        {
+    p = GetStr (Symb1);
+        if (strcmp (Symb1 , KeyWord [PIN]) == 0)
+            Found = TRUE;
+    else
+        {
+        if (strcmp (Symb1, KeyWord [HEADER]) == 0)
+            {
+            p = GetStr (Symb1);    /* get (PL1xx)    */
+            if (strcmp (Symb1, "(") == 0)
+                p = GetStr (Symb1);
+            else
+                p += 1;        /* skip '('    */
+            for (s = p; *s != '\0'; s++)
+                *s = ToUpper (*s);
+            if (strncmp (p, DevCode[DevNum],
+                    strlen (DevCode[DevNum])) != 0)
+                {
+                Error = ERR_SIM;
+                break;
+                }
+            }
+        }
+        }
+
+if (! Found)
+    {
+    if (Error)
+        fprintf (stderr, ErrTbl[Error], Symb1);
+    else
+        fprintf (stderr, ErrTbl[Error = ERR_KEY], KeyWord [PIN]);
+    }
+else
+    {
+    for (Done = FALSE; ! Done && Error == NO_ERR; )
+        {
+        p = GetStr (Symb1);
+        if (strcmp (Symb1, ";") == 0)
+            Done = TRUE;
+        else
+            {
+            p = GetStr (Symb2);
+            if (strcmp (Symb2, "=") != 0)
+            fprintf (stderr,ErrTbl[Error=ERR_KEY],"=");
+            else
+            {
+            p = GetStr (Symb2);
+            if (ScNum (Symb2, &PinNum) != NO_ERR ||
+            PinNum > DevParm[DevNum].MaxPin || PinNum < 1)
+                fprintf (stderr,
+                     ErrTbl[Error=ERR_PINN],Symb2);
+            else
+                strncpy (PinList[DevNum][PinNum].Name,
+                     Symb1,NAME_SIZ);
+            }
+            }
+        }
+    }
+return (Error);
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+ERR_CODE
+ReadSig ()
+
+/*
+** Reads the input/output signal lists.
+*/
+
+{
+ERR_CODE        Error = NO_ERR;
+register char        *p;
+char            Symb[81];
+BOOLEAN            Found, Done, KeySymb, SigFlag;
+SMALL            i;
+
+SigCnt = 0;
+
+for (p = Symb, Found = FALSE; ! Found && p != NULL; )
+        {
+    p = GetStr (Symb);
+        if (strcmp (Symb , KeyWord [VECT]) == 0)
+        Found = TRUE;
+        }
+
+if (! Found)
+    fprintf (stderr, ErrTbl[Error = ERR_KEY], KeyWord [VECT]);
+else
+    {
+    for (Done = FALSE, KeySymb = TRUE;
+         !Done && Error == NO_ERR;
+         )
+        {
+        p = GetStr (Symb);
+        if (p == NULL)
+        {
+        fprintf (stderr, ErrTbl[Error = ERR_KEY], KeyWord[BGN]);
+        break;
+        }
+        if (KeySymb)
+        {
+        if (strcmp (Symb, KeyWord [BGN]) == 0)
+            Done = TRUE;
+        else
+            {
+            if (strcmp (Symb, KeyWord [IN]) == 0)
+            SigFlag = INPUT;
+            else
+            if (strcmp (Symb, KeyWord [OUT]) == 0)
+                SigFlag = OUTPUT;
+            else
+                fprintf (stderr,
+                     ErrTbl[Error=ERR_SYMB], Symb);
+            }
+        KeySymb = FALSE;
+        }
+        else
+        {
+        if (strcmp (Symb, ";") == 0)
+            KeySymb = TRUE;
+        else
+            {
+            for (i = 1; i <= DevParm[DevNum].MaxPin; i++)
+                {
+                if (strncmp (Symb, PinList[DevNum][i].Name,
+                     NAME_SIZ) == 0)
+                {
+                if (PinList[DevNum][i].IOFlag != SigFlag)
+                {
+                if (PinList[DevNum][i].IOFlag == CLOCK
+                    && SigFlag == INPUT)
+                    SigList[SigCnt++] = i;
+                else
+                    fprintf (stderr,
+                         ErrTbl[Error = ERR_IO], Symb);
+                }
+                else
+                SigList [SigCnt++] = i;
+                break;
+                }
+            }
+            if (i > DevParm[DevNum].MaxPin)
+            fprintf (stderr, ErrTbl[Error=ERR_PIN], Symb);
+            }   /* else, not ; */
+        }   /* else, not KeySymb */
+        }   /* for */
+    }   /* else */
+
+return (Error);
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+ERR_CODE
+VectInit ()
+
+/*
+** This routine reads the pin delcarations and input/output
+** signal declarations.
+*/
+
+{
+ERR_CODE    Error = NO_ERR;
+
+Error = ReadPin ();
+if (Error == NO_ERR)
+    {
+    Error = ReadSig ();
+    }
+return (Error);
+}
+
+/*--------------------------------------------------------------*/
+
+void
+InpProc (PinLst, Pipe, XPipe, In, InX)
+
+SMALL        PinLst [];
+SMALL        *Pipe;
+SMALL        *XPipe;
+SMALL        *In;
+SMALL        *InX;
+
+/*
+** Processes test inputs.
+*/
+
+{
+register SMALL    i, Temp, TempX, Mask, PinNum;
+
+for (Mask = 1, i = Temp = TempX = 0;
+     (PinNum = PinLst [i]) != 0;
+     i++, Mask = Mask << 1)
+    {
+    switch (PinList [DevNum][PinNum].Value)
+        {
+        case '0':
+            Temp &= ~Mask;
+            break;
+        case '1':
+            Temp |= Mask;
+            break;
+        default:
+            if (DftX == -1)
+                {
+                TempX |= Mask;
+                Temp &= ~Mask;
+                }
+            else
+                {
+                if (DftX)
+                    Temp |= Mask;
+                else
+                    Temp &= ~Mask;
+                }
+            break;
+        }
+    }
+if (InPipe [DevNum])
+    {
+    *Pipe = *In;
+    *XPipe = *InX;
+    *In = Temp;
+    *InX = TempX;
+    }
+else
+    {
+    *Pipe = *In = Temp;
+    *XPipe = *InX = TempX;
+    }
+}
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+ERR_CODE
+ReadVect ()
+
+/*
+** Reads one vector and stores them in globals.
+*/
+
+{
+ERR_CODE    Error = NO_ERR;
+register SMALL    i, Cnt, PinNum, Mask;
+register char    *p, Ch;
+char        Symb [81];
+BOOLEAN        Done;
+
+for (i = 1; i <= DevParm [DevNum].MaxPin; i++)
+    {
+    PinList [DevNum] [i].Value = 'X';
+    PinList [DevNum] [i].ErrFlag = FALSE;
+    }
+
+p = GetStr (Symb);
+if (p == NULL)
+    fprintf (stderr, ErrTbl[Error = ERR_KEY], KeyWord[END]);
+else
+    {
+    if (strcmp (Symb, KeyWord[END]) == 0)
+        Error = EOF;        /* not really an error */
+    else
+        {
+        if (ScNum (Symb, &VectNum) != NO_ERR || VectNum > 10000)
+            fprintf (stderr, ErrTbl[Error=ERR_VNUM], Symb);
+        }
+    }
+
+for (Done = FALSE, Cnt = 0; ! Done && Error == NO_ERR; )
+    {
+    p = GetStr (Symb);
+    for (; *p != '\0' && Error == NO_ERR; p++)
+        {
+        if ((Ch = ToUpper (*p)) == ';')
+        {
+        Done = TRUE;
+        break;
+        }
+        else
+        {
+        PinNum = SigList[Cnt++];
+        PinList[DevNum][PinNum].Value = Ch;
+        switch (Ch)
+            {
+            case '0':
+            case '1':
+            if (PinList [DevNum][PinNum].IOFlag != INPUT)
+                PinList [DevNum][PinNum].ErrFlag = TRUE;
+            break;
+            case 'C':
+            if (PinList [DevNum][PinNum].IOFlag != CLOCK)
+                PinList [DevNum][PinNum].ErrFlag = TRUE;
+            break;
+            case 'N':
+            case 'L':
+            case 'H':
+            case 'Z':
+            if (PinList [DevNum][PinNum].IOFlag != OUTPUT)
+                PinList [DevNum][PinNum].ErrFlag = TRUE;
+            break;
+            case 'X':
+            break;
+            default:
+            PinList [DevNum][PinNum].ErrFlag = TRUE;
+            break;
+            }
+        }
+        }
+    }
+
+if (Error == NO_ERR)
+    {
+    if (Cnt < SigCnt)
+        fprintf (stderr, ErrTbl[Error=ERR_VLES],VectNum,SigCnt-Cnt);
+    else if (Cnt > SigCnt)
+        fprintf (stderr, ErrTbl[Error=ERR_VMOR],VectNum,SigCnt);
+    else
+        {
+        ClockIn = (PinList [DevNum][ClockPin [DevNum]].Value == 'C')
+                ? 1 : 0;
+        InpProc (ResetPin[DevNum],
+            &RstInPipe, &RstInXPipe, &RstIn, &RstInX);
+        InpProc (CCPin[DevNum], &CCInPipe,&CCInXPipe,&CCIn,&CCInX);
+        InpProc (TstPin [DevNum], &TInPipe, &TInXPipe, &TIn, &TInX);
+
+        for (Mask = 1, i = PMask = PVect = PHiZ = 0;
+         (PinNum = OutPin [DevNum][i]) != 0;
+         i++, Mask = Mask << 1)
+        {
+        Ch = PinList [DevNum][PinNum].Value;
+        if (Ch == 'L')
+            PMask |= Mask;
+        else if (Ch == 'H')
+            {
+            PMask |= Mask;
+            PVect |= Mask;
+            }
+        else if (Ch == 'Z')
+            {
+            PMask |= Mask;
+            PHiZ |= Mask;
+            }
+        else
+            {
+            if (DftX)
+            PVect |= Mask;
+            }
+        }
+
+        Mask = 1;
+        ZeroMask = ZeroVect = 0;
+        Ch = PinList [DevNum][ZeroPin[DevNum]].Value;
+        if (Ch == 'H' || Ch == 'L')
+        {
+        ZeroMask |= Mask;
+        if (Ch == 'H')
+            ZeroVect |= Mask;
+        }
+        else
+        {
+        if (DftX)
+            ZeroVect |= Mask;
+        if (Ch != 'X')
+            PinList [DevNum] [ZeroPin[DevNum]].ErrFlag=TRUE;
+        }
+        }
+    }
+
+return (Error);
+}
+
+/*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
+
+/* end of vector.c */
+SHAR_EOF
+#    End of shell archive
+exit 0
